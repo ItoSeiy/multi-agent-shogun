@@ -489,12 +489,12 @@ send_wakeup() {
         return 0
     fi
 
-    # Shogun: if the pane is focused, never inject keys (it can clobber the Lord's input).
-    # Instead, show a tmux message. If not focused, we can safely send the normal nudge.
+    # Shogun: pane is always active (single-pane window). Send display-message
+    # for visual notice, then fall through to send-keys for actual nudge delivery.
     if [ "$AGENT_ID" = "shogun" ] && pane_is_active; then
-        echo "[$(date)] [DISPLAY] shogun pane is active — showing nudge: inbox${unread_count}" >&2
+        echo "[$(date)] [DISPLAY+SEND] shogun pane is active — display-message + send-keys: inbox${unread_count}" >&2
         timeout 2 tmux display-message -t "$PANE_TARGET" -d 5000 "inbox${unread_count}" 2>/dev/null || true
-        return 0
+        # Fall through to send-keys below (do NOT return here)
     fi
 
     # 優先度3: tmux send-keys（テキストとEnterを分離 — Codex TUI対策）

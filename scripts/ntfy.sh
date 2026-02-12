@@ -21,5 +21,8 @@ while IFS= read -r line; do
     [ -n "$line" ] && AUTH_ARGS+=("$line")
 done < <(ntfy_get_auth_args "$SCRIPT_DIR/config/ntfy_auth.env")
 
+# macOS toast notification + sound
+osascript -e "display notification \"$1\" with title \"将軍通知\" sound name \"Hero\"" 2>/dev/null &
+
 # shellcheck disable=SC2086
 curl -s "${AUTH_ARGS[@]}" -H "Tags: outbound" -d "$1" "https://ntfy.sh/$TOPIC" > /dev/null

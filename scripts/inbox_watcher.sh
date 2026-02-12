@@ -527,6 +527,20 @@ pane_is_active() {
     [ "$active" = "1" ]
 }
 
+# ─── Human input detection (refined shogun safety) ───
+# pane_is_active は単独windowだと常にtrueで使い物にならない。
+# 代わりにプロンプト行にテキストが入力中かを検知する。
+# 入力中 → true (send-keys抑止)、空プロンプト → false (send-keys許可)
+pane_has_human_input() {
+    local last_line
+    last_line=$(timeout 2 tmux capture-pane -t "$PANE_TARGET" -p 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)
+    # プロンプト文字(❯/›)の後にテキストがある = 人間が入力途中
+    if echo "$last_line" | grep -qE '^[❯›].+[^[:space:]]'; then
+        return 0  # 入力中
+    fi
+    return 1  # 空プロンプト or 非プロンプト行
+}
+
 # ─── Send wake-up nudge ───
 # Layered approach:
 #   1. If agent has active inotifywait self-watch → skip (agent wakes itself)
@@ -557,10 +571,10 @@ send_wakeup() {
         return 0
     fi
 
-    # Shogun: pane is always active (single-pane window). Send display-message
-    # for visual notice, then fall through to send-keys for actual nudge delivery.
-    if [ "$AGENT_ID" = "shogun" ] && pane_is_active; then
-        echo "[$(date)] [DISPLAY+SEND] shogun pane is active — display-message + send-keys: inbox${unread_count}" >&2
+    # Shogun: 人間が入力途中の場合はsend-keysで上書きしない。
+    # 空プロンプトなら安全にnudgeを注入できる。
+    if [ "$AGENT_ID" = "shogun" ] && pane_has_human_input; then
+        echo "[$(date)] [DISPLAY] shogun has human input — showing nudge: inbox${unread_count}" >&2
         timeout 2 tmux display-message -t "$PANE_TARGET" -d 5000 "inbox${unread_count}" 2>/dev/null || true
         # Fall through to send-keys below (do NOT return here)
     fi

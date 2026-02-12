@@ -71,6 +71,11 @@ NUDGE_COOLDOWN_SEC=${NUDGE_COOLDOWN_SEC:-60}
 # Codex は「思考中に入力が入ると即拾う」挙動があり、思考がループすることがあるため長めにする。
 NUDGE_COOLDOWN_SEC_CODEX=${NUDGE_COOLDOWN_SEC_CODEX:-300}
 
+# ─── Context reset tracking ───
+# Tracks whether we've sent /new or /clear for the current task_assigned batch.
+# Resets to 0 when all messages are read (FIRST_UNREAD_SEEN → 0).
+NEW_CONTEXT_SENT=${NEW_CONTEXT_SENT:-0}
+
 # ─── Phase feature flags (cmd_107 Phase 1/2/3) ───
 # ASW_PHASE:
 #   1 = self-watch base (compatible)
@@ -329,8 +334,11 @@ try:
         os.replace(tmp_path, inbox)
 
     normal_count = len(unread) - len(specials)
+    normal_msgs = [m for m in unread if m.get("type") not in special_types]
+    has_task_assigned = any(m.get("type") == "task_assigned" for m in normal_msgs)
     payload = {
         "count": normal_count,
+        "has_task_assigned": has_task_assigned,
         "specials": [{"type": m.get("type", ""), "content": m.get("content", "")} for m in specials],
     }
     print(json.dumps(payload))
@@ -365,6 +373,11 @@ send_cli_command() {
             # /clearはCodexでは未定義コマンドでCLI終了してしまうため、/newに変換
             if [[ "$cmd" == "/clear" ]]; then
                 echo "[$(date)] [SEND-KEYS] Codex /clear→/new: starting new conversation for $AGENT_ID" >&2
+                # Dismiss suggestion UI first (typing "x" clears autocomplete prompt)
+                timeout 5 tmux send-keys -t "$PANE_TARGET" "x" 2>/dev/null
+                sleep 0.3
+                timeout 5 tmux send-keys -t "$PANE_TARGET" C-u 2>/dev/null
+                sleep 0.3
                 timeout 5 tmux send-keys -t "$PANE_TARGET" "/new" 2>/dev/null
                 sleep 0.3
                 timeout 5 tmux send-keys -t "$PANE_TARGET" Enter 2>/dev/null
@@ -415,6 +428,59 @@ send_cli_command() {
     fi
 }
 
+# ─── Send context reset before new task ───
+# Called when task_assigned is detected in unread messages.
+# Sends the appropriate "new conversation" command per CLI type to clear
+# stale context from the previous task.
+# CLI mapping: claude→/clear, codex→/new, copilot→/clear, kimi→/clear
+send_context_reset() {
+    local effective_cli
+    effective_cli=$(get_effective_cli_type)
+
+    # Safety: never inject CLI commands into the shogun pane.
+    if [ "$AGENT_ID" = "shogun" ]; then
+        echo "[$(date)] [SKIP] shogun: suppressing context reset" >&2
+        return 0
+    fi
+
+    local reset_cmd
+    case "$effective_cli" in
+        codex)    reset_cmd="/new" ;;
+        claude)   reset_cmd="/clear" ;;
+        copilot)  reset_cmd="/clear" ;;
+        kimi)     reset_cmd="/clear" ;;
+        *)        reset_cmd="/new" ;;  # safe default (codex-safe)
+    esac
+
+    echo "[$(date)] [CONTEXT-RESET] Sending $reset_cmd before task_assigned for $AGENT_ID ($effective_cli)" >&2
+
+    # Dismiss Codex suggestion UI before sending reset command
+    if [[ "$effective_cli" == "codex" ]]; then
+        timeout 5 tmux send-keys -t "$PANE_TARGET" "x" 2>/dev/null
+        sleep 0.3
+        timeout 5 tmux send-keys -t "$PANE_TARGET" C-u 2>/dev/null
+        sleep 0.3
+    fi
+
+    # Send the command (text and Enter separated for TUI compatibility)
+    timeout 5 tmux send-keys -t "$PANE_TARGET" "$reset_cmd" 2>/dev/null
+    sleep 0.3
+    timeout 5 tmux send-keys -t "$PANE_TARGET" Enter 2>/dev/null
+
+    # Poll until agent becomes idle (prompt ready) instead of fixed sleep.
+    # Max 15s (3 attempts × 5s). If still busy after 15s, proceed anyway.
+    local attempt
+    for attempt in 1 2 3; do
+        sleep 5
+        if ! agent_is_busy; then
+            echo "[$(date)] [CONTEXT-RESET] $AGENT_ID idle after ${attempt}×5s — ready for nudge" >&2
+            return 0
+        fi
+        echo "[$(date)] [CONTEXT-RESET] $AGENT_ID still busy after ${attempt}×5s — retrying" >&2
+    done
+    echo "[$(date)] [CONTEXT-RESET] $AGENT_ID still busy after 15s — proceeding with nudge anyway" >&2
+}
+
 # ─── Agent self-watch detection ───
 # Check if the agent has an active inotifywait on its inbox.
 # If yes, the agent will self-wake — no nudge needed.
@@ -427,25 +493,27 @@ agent_has_self_watch() {
 # Sending nudge during Working causes text to queue but Enter to be lost.
 # Returns 0 (true) if agent is busy, 1 if idle.
 agent_is_busy() {
-    local pane_content
-    # NOTE:
-    # - Codex は「思考中に入力が入ると即拾う」ため、busy判定はシンプルに寄せる。
-    # - Claude も含め、スピナー（見た目カスタムされがち）には依存しない。
-    # - 取得行数を増やし過ぎると誤判定が増えるので、基本は直近の行だけを見る。
-    pane_content=$(timeout 2 tmux capture-pane -t "$PANE_TARGET" -p -S -60 2>/dev/null | tail -60)
+    local pane_tail
+    # Only check the bottom 5 lines of the pane. Old busy markers ("esc to interrupt",
+    # "Working") linger in scroll-back and cause false-busy if we scan too many lines.
+    pane_tail=$(timeout 2 tmux capture-pane -t "$PANE_TARGET" -p 2>/dev/null | tail -5)
 
-    # Most reliable marker across TUIs while the model is actively streaming.
-    if echo "$pane_content" | grep -qiF 'esc to interrupt'; then
-        return 0  # busy
+    # ── Idle check (takes priority) ──
+    if echo "$pane_tail" | grep -qE '(\? for shortcuts|context left)'; then
+        return 1  # idle — Codex idle prompt
+    fi
+    if echo "$pane_tail" | grep -qE '^(❯|›)\s*$'; then
+        return 1  # idle — Claude Code or Codex bare prompt
     fi
 
-    # Codex sometimes shows this when a tool/terminal is running in the background.
-    if echo "$pane_content" | grep -qiF 'background terminal running'; then
+    # ── Busy markers (bottom 5 lines only) ──
+    if echo "$pane_tail" | grep -qiF 'esc to interrupt'; then
         return 0  # busy
     fi
-
-    # Minimal fallbacks (no spinner dependency).
-    if echo "$pane_content" | grep -qiE '(Working|Thinking|Planning|Sending|task is in progress|Compacting conversation|thought for|思考中|考え中|計画中|送信中|処理中|実行中)'; then
+    if echo "$pane_tail" | grep -qiF 'background terminal running'; then
+        return 0  # busy
+    fi
+    if echo "$pane_tail" | grep -qiE '(Working|Thinking|Planning|Sending|task is in progress|Compacting conversation|thought for|思考中|考え中|計画中|送信中|処理中|実行中)'; then
         return 0  # busy
     fi
     return 1  # idle
@@ -499,6 +567,19 @@ send_wakeup() {
 
     # 優先度3: tmux send-keys（テキストとEnterを分離 — Codex TUI対策）
     echo "[$(date)] [SEND-KEYS] Sending nudge to $PANE_TARGET for $AGENT_ID" >&2
+
+    # Codex suggestion UI dismissal: typing any character dismisses the autocomplete
+    # suggestion prompt (› Implement {feature} etc.) that traps idle agents.
+    # Sequence: "x" (dismiss suggestion) → C-u (clear input) → nudge → Enter
+    local effective_cli_for_nudge
+    effective_cli_for_nudge=$(get_effective_cli_type)
+    if [[ "$effective_cli_for_nudge" == "codex" ]]; then
+        timeout 5 tmux send-keys -t "$PANE_TARGET" "x" 2>/dev/null
+        sleep 0.3
+        timeout 5 tmux send-keys -t "$PANE_TARGET" C-u 2>/dev/null
+        sleep 0.3
+    fi
+
     if timeout 5 tmux send-keys -t "$PANE_TARGET" "$nudge" 2>/dev/null; then
         sleep 0.3
         timeout 5 tmux send-keys -t "$PANE_TARGET" Enter 2>/dev/null
@@ -588,6 +669,7 @@ process_unread() {
             echo "[$(date)] All messages read for $AGENT_ID — escalation reset (fast-path)" >&2
         fi
         FIRST_UNREAD_SEEN=0
+        NEW_CONTEXT_SENT=0
         if ! agent_is_busy; then
             # Shogun is human-controlled; never clear the input line automatically.
             if [ "$AGENT_ID" != "shogun" ]; then
@@ -645,6 +727,10 @@ for s in data.get('specials', []):
     local normal_count
     normal_count=$(echo "$info" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null)
 
+    # Check if unread messages include task_assigned (for context reset)
+    local has_task_assigned
+    has_task_assigned=$(echo "$info" | python3 -c "import sys,json; print(1 if json.load(sys.stdin).get('has_task_assigned') else 0)" 2>/dev/null)
+
     if [ "$normal_count" -gt 0 ] 2>/dev/null; then
         local now
         now=$(date +%s)
@@ -656,6 +742,16 @@ for s in data.get('specials', []):
             FIRST_UNREAD_SEEN=$now
             echo "[$(date)] $normal_count unread for $AGENT_ID but agent is busy — pausing escalation timer" >&2
             return 0
+        fi
+
+        # ─── Context reset before new task ───
+        # Send /new or /clear once when task_assigned is first detected,
+        # to clear stale context from the previous task.
+        # Skip if: (1) already sent this batch, (2) clear_command already handled above,
+        #          (3) agent is shogun (human-controlled).
+        if [ "$has_task_assigned" = "1" ] && [ "$NEW_CONTEXT_SENT" -eq 0 ] && [ "$clear_seen" -eq 0 ]; then
+            send_context_reset
+            NEW_CONTEXT_SENT=1
         fi
 
         # Track when we first saw unread messages
@@ -702,6 +798,7 @@ for s in data.get('specials', []):
                     send_cli_command "/clear"
                     LAST_CLEAR_TS=$now
                     FIRST_UNREAD_SEEN=0  # Reset — will re-detect on next cycle
+                    NEW_CONTEXT_SENT=0
                 fi
             else
                 # Cooldown active — fall back to Escape+nudge
@@ -715,6 +812,7 @@ for s in data.get('specials', []):
             echo "[$(date)] All messages read for $AGENT_ID — escalation reset" >&2
         fi
         FIRST_UNREAD_SEEN=0
+        NEW_CONTEXT_SENT=0
         # Clear stale nudge text from input field (Codex CLI prefills last input on idle).
         # Only send C-u when agent is idle — during Working it would be disruptive.
         if ! agent_is_busy; then

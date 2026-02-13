@@ -4,8 +4,9 @@
 
 set -e
 
-REPO_DIR="/Users/s20815/shogun-dashboard"
-SOURCE_FILE="/Users/s20815/multi-agent-shogun/dashboard.md"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/shogun-dashboard"
+SOURCE_FILE="$SCRIPT_DIR/dashboard.md"
 TARGET_FILE="$REPO_DIR/mac/dashboard.md"
 
 # Check file existence

@@ -709,3 +709,89 @@ PY
     ! grep -q "send-keys.*/model" "$MOCK_LOG"
     echo "$output" | grep -q "not supported on copilot"
 }
+
+# --- T-SHOGUN-001: shogun + pane_is_active → send-keys is sent ---
+
+@test "T-SHOGUN-001: shogun with active pane sends nudge via send-keys (not display-message only)" {
+    run bash -c '
+        source "'"$TEST_HARNESS"'"
+        AGENT_ID="shogun"
+        # Override tmux mock to handle pane_is_active correctly
+        tmux() {
+            echo "tmux $*" >> "'"$MOCK_LOG"'"
+            if echo "$*" | grep -q "display-message.*-p"; then
+                echo "1"  # pane_is_active returns true
+                return 0
+            fi
+            if echo "$*" | grep -q "capture-pane"; then
+                echo "${MOCK_CAPTURE_PANE:-}"
+                return 0
+            fi
+            if echo "$*" | grep -q "send-keys"; then
+                return ${MOCK_SENDKEYS_RC:-0}
+            fi
+            return 0
+        }
+        export -f tmux
+        send_wakeup 3
+    '
+    [ "$status" -eq 0 ]
+
+    # Verify send-keys was used with inbox3
+    grep -q "send-keys.*inbox3" "$MOCK_LOG"
+    # Verify Enter was sent separately
+    grep -q "send-keys.*Enter" "$MOCK_LOG"
+    # Verify display-message was also sent (visual notification)
+    grep -q "display-message" "$MOCK_LOG"
+}
+
+# --- T-SHOGUN-002: shogun send_cli_command is blocked ---
+
+@test "T-SHOGUN-002: shogun send_cli_command is blocked (no /clear sent)" {
+    run bash -c '
+        source "'"$TEST_HARNESS"'"
+        AGENT_ID="shogun"
+        send_cli_command "/clear" 2>&1
+    '
+    [ "$status" -eq 0 ]
+
+    # Verify NO send-keys occurred
+    ! grep -q "send-keys" "$MOCK_LOG"
+    # Verify stderr contains SKIP
+    echo "$output" | grep -q "SKIP"
+}
+
+# --- T-SHOGUN-003: shogun send_wakeup_with_escape falls back to send_wakeup ---
+
+@test "T-SHOGUN-003: shogun send_wakeup_with_escape falls back to standard send_wakeup" {
+    run bash -c '
+        source "'"$TEST_HARNESS"'"
+        AGENT_ID="shogun"
+        # Override tmux mock for pane_is_active
+        tmux() {
+            echo "tmux $*" >> "'"$MOCK_LOG"'"
+            if echo "$*" | grep -q "display-message.*-p"; then
+                echo "1"  # pane_is_active returns true
+                return 0
+            fi
+            if echo "$*" | grep -q "capture-pane"; then
+                echo "${MOCK_CAPTURE_PANE:-}"
+                return 0
+            fi
+            if echo "$*" | grep -q "send-keys"; then
+                return ${MOCK_SENDKEYS_RC:-0}
+            fi
+            return 0
+        }
+        export -f tmux
+        send_wakeup_with_escape 2
+    '
+    [ "$status" -eq 0 ]
+
+    # Verify inbox2 was sent via send-keys
+    grep -q "send-keys.*inbox2" "$MOCK_LOG"
+    # Verify Enter was sent
+    grep -q "send-keys.*Enter" "$MOCK_LOG"
+    # Verify NO Escape was sent (fallback to standard nudge)
+    ! grep -q "send-keys.*Escape" "$MOCK_LOG"
+}

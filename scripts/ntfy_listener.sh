@@ -153,14 +153,17 @@ while true; do
 
         echo "[$(date)] Received: $MSG" >&2
 
+        # Auto-acknowledge to phone (immediate, before Shogun processes)
+        bash "$SCRIPT_DIR/scripts/ntfy.sh" "📱 受信: $MSG"
+
         # Append to inbox YAML (flock + atomic write; multiline-safe)
         if ! append_ntfy_inbox "$MSG_ID" "$TIMESTAMP" "$MSG"; then
             echo "[$(date)] [ntfy_listener] WARNING: failed to append ntfy_inbox entry" >&2
             continue
         fi
 
-        # Wake karo via inbox (ntfy処理は家老の責務)
-        bash "$SCRIPT_DIR/scripts/inbox_write.sh" karo \
+        # Wake shogun via inbox
+        bash "$SCRIPT_DIR/scripts/inbox_write.sh" shogun \
             "ntfyから新しいメッセージ受信。queue/ntfy_inbox.yaml を確認し処理せよ。" \
             ntfy_received ntfy_listener
     done

@@ -187,9 +187,9 @@ When a message arrives, you'll be woken with "ntfy受信あり".
 
 ## Response Channel Rule
 
-- ntfyからの入力 → ntfyで返信 + Claude上でも同内容を返信
-- Claude上での入力 → Claude上でのみ返信
-- 家老の通知動作は変更なし
+- Input from ntfy → Reply via ntfy + echo the same content in Claude
+- Input from Claude → Reply in Claude only
+- Karo's notification behavior remains unchanged
 
 ## SayTask Task Management Routing
 

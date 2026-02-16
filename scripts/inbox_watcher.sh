@@ -10,8 +10,8 @@
 #   エージェントが自分でinboxをReadして処理する
 #   冪等: 2回届いてもunreadがなければ何もしない
 #
-# inotifywait (Linux) / fswatch (macOS) でファイル変更を検知（イベント駆動）
-# Fallback 1: 30秒タイムアウト（inotify不発時の安全網）
+# inotifywait でファイル変更を検知（イベント駆動、ポーリングではない）
+# Fallback 1: 30秒タイムアウト（WSL2 inotify不発時の安全網）
 # Fallback 2: rc=1処理（Claude Code atomic write = tmp+rename でinode変更時）
 #
 # エスカレーション（未読メッセージが放置されている場合）:
@@ -95,9 +95,6 @@ if ! command -v timeout &>/dev/null; then
     }
   fi
 fi
-
-# Allow FILE_WATCHER to be set externally (testing)
-FILE_WATCHER=${FILE_WATCHER:-inotifywait}
 
 # ─── Escalation state ───
 # Time-based escalation: track how long unread messages have been waiting
@@ -670,14 +667,11 @@ send_wakeup() {
         return 0
     fi
 
-    # Shogun: if the pane is focused AND a human is attached, never inject keys
-    # (it can clobber the Lord's input). Show a tmux message instead.
-    # If session is detached, no human is watching — safe to send-keys normally.
-    if [ "$AGENT_ID" = "shogun" ] && pane_is_active && session_has_client; then
-        echo "[$(date)] [DISPLAY] shogun pane is active + attached — showing nudge: inbox${unread_count}" >&2
-        timeout 2 tmux display-message -t "$PANE_TARGET" -d 5000 "inbox${unread_count}" 2>/dev/null || true
-        return 0
-    fi
+    # Shogun: if the pane is focused AND a human is attached, still send-keys.
+    # agent_is_busy() was already checked above — at this point the agent is idle,
+    # meaning Claude Code is waiting at the prompt. Injecting "inboxN" + Enter is
+    # safe and necessary for ntfy notifications to reach the agent.
+    # (display-message only showed a visual banner that Claude never processed.)
 
     # 優先度3: tmux send-keys（テキストとEnterを分離 — Codex TUI対策）
     echo "[$(date)] [SEND-KEYS] Sending nudge to $PANE_TARGET for $AGENT_ID" >&2

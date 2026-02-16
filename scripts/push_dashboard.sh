@@ -34,4 +34,5 @@ else
   git commit -m "update: dashboard $(date '+%Y-%m-%d %H:%M')"
   git push origin main
   echo "Dashboard pushed successfully."
+  bash "$SCRIPT_DIR/scripts/ntfy.sh" "📊 軍議場更新"
 fi

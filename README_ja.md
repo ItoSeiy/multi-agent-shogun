@@ -1142,6 +1142,51 @@ cp config/ntfy_auth.env.sample config/ntfy_auth.env
 
 ---
 
+### 📊 Dashboard Push（ダッシュボード自動push）
+
+`dashboard.md` を外部のプライベートリポジトリに自動pushし、バックアップや他デバイスでの閲覧を可能にします。
+
+#### セットアップ
+
+1. プライベートGitHubリポジトリを作成:
+   ```bash
+   gh repo create shogun-dashboard --private
+   ```
+
+2. 初回セットアップを実行:
+   ```bash
+   bash first_setup.sh
+   ```
+
+   STEP 12 でDashboard Push設定のプロンプトが表示されたら「Yes」を選択してください。
+
+3. 対話的プロンプトに従って設定:
+   - リポジトリURL（例: `git@github.com:user/shogun-dashboard.git`）
+   - ブランチ名（デフォルト: `main`）
+   - サブディレクトリ（オプション、複数マシン用に `mac` など）
+
+#### 仕組み
+
+- 家老がダッシュボード更新後、`scripts/push_dashboard.sh` を自動で呼び出します
+- スクリプトがリポジトリを `.dashboard-repo/` にクローンします（git-ignored）
+- 変更がコミットされ、設定されたブランチにpushされます
+- ntfyが設定されている場合、push成功時に通知が送信されます
+
+#### 設定
+
+設定は `config/settings.yaml` に保存されます:
+
+```yaml
+dashboard_push:
+  repo: "git@github.com:user/shogun-dashboard.git"
+  branch: "main"
+  subdirectory: ""
+```
+
+機能を無効にするには `repo` を空のままにしてください。
+
+---
+
 ## 🛠️ 上級者向け
 
 <details>

@@ -757,10 +757,12 @@ Automatically push `dashboard.md` to an external private repository for backup a
    gh repo create shogun-dashboard --private
    ```
 
-2. Run the setup script:
+2. Run the first-time setup:
    ```bash
-   bash scripts/setup_dashboard_push.sh
+   bash first_setup.sh
    ```
+
+   Select "Yes" when prompted for Dashboard Push configuration in STEP 12.
 
 3. Follow the interactive prompts to configure:
    - Repository URL (e.g., `git@github.com:user/shogun-dashboard.git`)

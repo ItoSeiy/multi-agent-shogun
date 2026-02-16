@@ -93,6 +93,8 @@
 !scripts/seo_qc.py
 !scripts/seo_qc.sh
 !scripts/stop_hook_inbox.sh
+!scripts/push_dashboard.sh
+!scripts/setup_dashboard_push.sh
 
 
 # SayTask (sample template only, not actual data)
@@ -147,3 +149,6 @@
 !.github/
 !.github/workflows/
 !.github/workflows/*.yml
+
+# Dashboard push local clone
+.dashboard-repo/

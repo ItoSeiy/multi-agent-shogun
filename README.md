@@ -744,6 +744,51 @@ The listener automatically reconnects if the connection drops. `shutsujin_depart
 
 > *Note: Topic names shown in screenshots are examples. Use your own unique topic name.*
 
+---
+
+### 📊 Dashboard Push
+
+Automatically push `dashboard.md` to an external private repository for backup and viewing on other devices.
+
+#### Setup
+
+1. Create a private GitHub repository:
+   ```bash
+   gh repo create shogun-dashboard --private
+   ```
+
+2. Run the setup script:
+   ```bash
+   bash scripts/setup_dashboard_push.sh
+   ```
+
+3. Follow the interactive prompts to configure:
+   - Repository URL (e.g., `git@github.com:user/shogun-dashboard.git`)
+   - Branch name (default: `main`)
+   - Subdirectory (optional, e.g., `mac` for multi-machine setup)
+
+#### How it Works
+
+- Karo automatically calls `scripts/push_dashboard.sh` after updating the dashboard
+- The script clones the repository to `.dashboard-repo/` (git-ignored)
+- Changes are committed and pushed to the configured branch
+- If ntfy is configured, a notification is sent on successful push
+
+#### Configuration
+
+Settings are stored in `config/settings.yaml`:
+
+```yaml
+dashboard_push:
+  repo: "git@github.com:user/shogun-dashboard.git"
+  branch: "main"
+  subdirectory: ""
+```
+
+Leave `repo` empty to disable the feature.
+
+---
+
 #### SayTask Notifications
 
 Behavioral psychology-driven motivation through your notification feed:

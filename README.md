@@ -746,7 +746,7 @@ The listener automatically reconnects if the connection drops. `shutsujin_depart
 
 ### 🔧 8. Dashboard Push
 
-Automatically push `dashboard.md` to an external private repository for backup and viewing on other devices.
+Monitor your agents' progress in real-time from your phone using the GitHub mobile app.
 
 - Configure via `first_setup.sh` (STEP 12)
 - Auto-push after Karo updates the dashboard
@@ -756,7 +756,7 @@ Automatically push `dashboard.md` to an external private repository for backup a
 
 ### 📊 Dashboard Push
 
-Automatically push `dashboard.md` to an external private repository for backup and viewing on other devices.
+Monitor your agents' progress in real-time from your phone using the GitHub mobile app.
 
 #### Setup
 

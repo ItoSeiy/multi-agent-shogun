@@ -726,7 +726,7 @@ bash scripts/ntfy_listener.sh
 
 ### 🔧 8. Dashboard Push（ダッシュボード自動push）
 
-`dashboard.md` を外部のプライベートリポジトリに自動pushし、バックアップや他デバイスでの閲覧を可能にします。
+`dashboard.md` を外部リポジトリに自動pushし、スマホ（GitHub App）からエージェントの進捗をリアルタイムに確認できます。
 
 - `first_setup.sh`（STEP 12）で設定
 - 家老のダッシュボード更新後に自動push
@@ -1152,7 +1152,7 @@ cp config/ntfy_auth.env.sample config/ntfy_auth.env
 
 ### 📊 Dashboard Push（ダッシュボード自動push）
 
-`dashboard.md` を外部のプライベートリポジトリに自動pushし、バックアップや他デバイスでの閲覧を可能にします。
+`dashboard.md` を外部リポジトリに自動pushし、スマホ（GitHub App）からエージェントの進捗をリアルタイムに確認できます。
 
 #### セットアップ
 

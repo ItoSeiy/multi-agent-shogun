@@ -744,6 +744,14 @@ The listener automatically reconnects if the connection drops. `shutsujin_depart
 
 > *Note: Topic names shown in screenshots are examples. Use your own unique topic name.*
 
+### 🔧 8. Dashboard Push
+
+Automatically push `dashboard.md` to an external private repository for backup and viewing on other devices.
+
+- Configure via `first_setup.sh` (STEP 12)
+- Auto-push after Karo updates the dashboard
+- Optional ntfy notification on successful push
+
 ---
 
 ### 📊 Dashboard Push
@@ -799,7 +807,7 @@ Behavioral psychology-driven motivation through your notification feed:
 - **Eat the Frog** 🐸: The hardest task of the day is marked as the "Frog." Completing it triggers a special celebration notification
 - **Daily progress**: `12/12 tasks today` — visual completion feedback reinforces the Arbeitslust effect (joy of work-in-progress)
 
-### 🖼️ 8. Pane Border Task Display
+### 🖼️ 9. Pane Border Task Display
 
 Each tmux pane shows the agent's current task directly on its border:
 
@@ -820,7 +828,7 @@ Each tmux pane shows the agent's current task directly on its border:
 - Updated automatically by the Karo when assigning or completing tasks
 - Glance at all 9 panes to instantly know who's doing what
 
-### 🔊 9. Shout Mode (Battle Cries)
+### 🔊 10. Shout Mode (Battle Cries)
 
 When an Ashigaru completes a task, it shouts a personalized battle cry in the tmux pane — a visual reminder that your army is working hard.
 

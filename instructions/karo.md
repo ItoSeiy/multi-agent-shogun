@@ -270,7 +270,7 @@ Before assigning tasks, ask yourself these questions:
 | Level | Gunshi Involvement | Examples |
 |-------|-------------------|----------|
 | L1-L2 | Skippable (Karo→Ashigaru direct) | Typo fixes, single line additions, file moves |
-| L3 | **QC only (required)** (Ashigaru→Gunshi QC→Karo) | Implementation following existing patterns, config changes |
+| L3 | **QC optional (Karo's judgment)** (Ashigaru→Gunshi QC→Karo) | Implementation following existing patterns, config changes |
 | L4 | **QC required + pre-analysis recommended** | Investigation/verification tasks, multi-file modifications |
 | L5-L6 | **QC required + pre-analysis required** | Design, architecture, strategic planning |
 
@@ -278,7 +278,7 @@ Before assigning tasks, ask yourself these questions:
 ```
 Receive cmd → Bloom Level judgment
   → L1-L2: Karo assigns directly to ashigaru (skip Gunshi)
-  → L3: Assign to ashigaru → Gunshi QC after completion
+  → L3: Assign to ashigaru → Gunshi QC optional (Karo's judgment: skip for simple tasks, request for complex ones)
   → L4: Request Gunshi pre-analysis (recommended) → Assign to ashigaru → Gunshi QC after completion
   → L5-L6: Request Gunshi pre-analysis (required) → Assign to ashigaru → Gunshi QC after completion
 ```
@@ -787,7 +787,8 @@ When Gunshi completes:
 | Bloom Level | QC Handler | Reason |
 |-------------|-----------|--------|
 | L1-L2 (trivial) | Karo judges directly | Simple checks (file existence, format verification, etc.) |
-| **L3+** | **Route to Gunshi (required)** | Quality judgment requires deep thinking |
+| **L3** | **Route to Gunshi (optional — Karo's judgment)** | For simple pattern-following tasks, Karo may judge directly. For complex L3 tasks, route to Gunshi. |
+| **L4+** | **Route to Gunshi (required)** | Quality judgment requires deep thinking |
 
 #### L1-L2 Direct QC (Gunshi Skippable)
 
@@ -802,16 +803,22 @@ Karo may handle directly only for simple tasks:
 
 **Judgment criteria**: No thinking required, mechanical verification only. Decidable within 1 minute.
 
-#### L3+ QC: Delegate to Gunshi (Required)
+#### L3 QC: Optional (Karo's Judgment) / L4+ QC: Required
 
-Ashigaru completes → Request Gunshi QC → Gunshi judges quality → Report to Karo
+**L3 QC judgment criteria**:
+- **Skip QC**: Simple pattern application, small config changes, existing template usage
+- **Request QC**: Complex logic, multi-file impact, architectural concerns
+
+**L4+ tasks**: Always route to Gunshi QC (required).
+
+Ashigaru completes → Request Gunshi QC (if needed) → Gunshi judges quality → Report to Karo
 
 | Task Type | Bloom Level | QC Content |
 |-----------|-------------|------------|
 | Design document creation | L5 | Design validity, completeness, implementability |
 | Multi-file modification | L4 | Consistency, side effects, dependencies |
 | Investigation/analysis | L4 | Investigation completeness, conclusion validity |
-| Code implementation (complex) | L3 | Code quality, test coverage, design compliance |
+| Code implementation (complex) | L3 | Code quality, test coverage, design compliance (QC optional) |
 
 #### QC Request Procedure (After Ashigaru Completion)
 
@@ -820,7 +827,8 @@ STEP 1: Receive ashigaru completion report (inbox_write from ashigaru)
 STEP 2: Read ashigaru report YAML (queue/reports/ashigaru{N}_report.yaml)
 STEP 3: Bloom Level judgment
   - L1-L2 → Karo judges directly → Update dashboard
-  - L3+ → Request Gunshi QC (proceed to next step)
+  - L3 → Karo's judgment: simple task → skip QC / complex task → request Gunshi QC
+  - L4+ → Request Gunshi QC (required, proceed to next step)
 STEP 4: Create Gunshi task YAML (queue/tasks/gunshi.yaml)
   - type: quality_check
   - target_report: queue/reports/ashigaru{N}_report.yaml

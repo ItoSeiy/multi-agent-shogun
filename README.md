@@ -565,7 +565,45 @@ Step 3: Agent reads its own inbox
 - **Zero CPU while idle** — `inotifywait` blocks on a kernel event (not a poll loop). CPU usage is 0% between messages.
 - **Guaranteed delivery** — If the file write succeeded, the message is there. No lost messages, no retries needed.
 
-### 📸 5. Screenshot Integration
+### 📊 5. Agent Status Check
+
+See which agents are busy or idle — instantly, from one command:
+
+```bash
+# Project mode: full status with task/inbox info
+bash scripts/agent_status.sh
+
+# Standalone mode: works with any tmux session
+bash scripts/agent_status.sh --session mysession --lang en
+```
+
+**Project mode output:**
+```
+Agent      CLI     Pane      Task ID                                    Status     Inbox
+---------- ------- --------- ------------------------------------------ ---------- -----
+karo       claude  待機中    ---                                        ---        0
+ashigaru1  codex   稼働中    subtask_042a_research                      assigned   0
+ashigaru2  codex   待機中    subtask_042b_review                        done       0
+gunshi     claude  稼働中    subtask_042c_analysis                      assigned   0
+```
+
+**Standalone mode output** (no project config needed):
+```
+Pane                           State      Agent ID
+------------------------------ ---------- ----------
+multiagent:agents.0            IDLE       karo
+multiagent:agents.1            BUSY       ashigaru1
+multiagent:agents.8            BUSY       gunshi
+```
+
+Detection works for both **Claude Code** and **Codex CLI** by checking CLI-specific prompt/spinner patterns in the bottom 5 lines of each tmux pane. The detection logic lives in `lib/agent_status.sh` — source it in your own scripts:
+
+```bash
+source lib/agent_status.sh
+agent_is_busy_check "multiagent:agents.3" && echo "busy" || echo "idle"
+```
+
+### 📸 6. Screenshot Integration
 
 VSCode's Claude Code extension lets you paste screenshots to explain issues. This CLI system provides the same capability:
 
@@ -589,7 +627,7 @@ Use cases:
 - Show error messages
 - Compare before/after states
 
-### 📁 6. Context Management (4-Layer Architecture)
+### 📁 7. Context Management (4-Layer Architecture)
 
 Efficient knowledge sharing through a four-layer context system:
 
@@ -638,7 +676,7 @@ This unified format enables:
 - Consistent information management across all projects
 - Easy handoff between Ashigaru workers
 
-### 📱 7. Phone Notifications (ntfy)
+### 📱 8. Phone Notifications (ntfy)
 
 Two-way communication between your phone and the Shogun — no SSH, no Tailscale, no server needed.
 
@@ -1376,10 +1414,12 @@ multi-agent-shogun/
 │       └── copilot_tools.md  # GitHub Copilot CLI tools & features
 │
 ├── lib/
+│   ├── agent_status.sh       # Shared busy/idle detection (Claude Code + Codex)
 │   ├── cli_adapter.sh        # Multi-CLI adapter (Claude/Codex/Copilot/Kimi)
 │   └── ntfy_auth.sh          # ntfy authentication helper
 │
 ├── scripts/                  # Utility scripts
+│   ├── agent_status.sh       # Show busy/idle status of all agents
 │   ├── inbox_write.sh        # Write messages to agent inbox
 │   ├── inbox_watcher.sh      # Watch inbox changes via inotifywait
 │   ├── ntfy.sh               # Send push notifications to phone

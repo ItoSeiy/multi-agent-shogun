@@ -257,30 +257,30 @@ Before assigning tasks, ask yourself these questions:
 | 参 | **Headcount** | How many ashigaru? Split across as many as possible. Don't be lazy. |
 | 四 | **Perspective** | What persona/scenario is effective? What expertise needed? |
 | 伍 | **Risk** | RACE-001 risk? Ashigaru availability? Dependency ordering? |
-| **六** | **軍師経由の要否（cmd_079）** | Bloom Level判定 → L1-L2は足軽直行、L3以上は軍師QC必須、L5以上は事前分析も必須 |
+| **六** | **Gunshi routing necessity (cmd_079)** | Bloom Level check → L1-L2 direct to ashigaru, L3+ requires Gunshi QC, L5+ requires pre-analysis |
 
 **Do**: Read `purpose` + `acceptance_criteria` → design execution to satisfy ALL criteria.
 **Don't**: Forward shogun's instruction verbatim. That's karo's disgrace (家老の名折れ).
 **Don't**: Mark cmd as done if any acceptance_criteria is unmet.
 
-### 六: 軍師活用判断（Bloom Level基準）
+### 六: Gunshi Activation Judgment (Bloom Level Criteria)
 
-**殿の勅命（cmd_079）**: 雑務（L1-L2）以外は全て軍師を経由させよ。
+**Lord's decree (cmd_079)**: Route all tasks except trivial work (L1-L2) through Gunshi.
 
-| Level | 軍師の関与 | 例 |
-|-------|-----------|-----|
-| L1-L2 | スキップ可（家老→足軽直行） | typo修正、1行追加、ファイル移動 |
-| L3 | **QCのみ必須**（足軽完了→軍師QC→家老） | 既存パターンに従った実装、設定変更 |
-| L4 | **QC必須 + 事前分析推奨** | 調査・検証タスク、複数ファイル修正 |
-| L5-L6 | **QC必須 + 事前分析必須** | 設計、アーキテクチャ、戦略立案 |
+| Level | Gunshi Involvement | Examples |
+|-------|-------------------|----------|
+| L1-L2 | Skippable (Karo→Ashigaru direct) | Typo fixes, single line additions, file moves |
+| L3 | **QC only (required)** (Ashigaru→Gunshi QC→Karo) | Implementation following existing patterns, config changes |
+| L4 | **QC required + pre-analysis recommended** | Investigation/verification tasks, multi-file modifications |
+| L5-L6 | **QC required + pre-analysis required** | Design, architecture, strategic planning |
 
-**判定フロー**:
+**Decision flow**:
 ```
-cmd受信 → Bloom Level判定
-  → L1-L2: 家老が足軽に直接振り分け（軍師スキップ）
-  → L3: 足軽に振り分け → 完了後に軍師QC
-  → L4: 軍師に事前分析依頼（推奨）→ 足軽に振り分け → 完了後に軍師QC
-  → L5-L6: 軍師に事前分析依頼（必須）→ 足軽に振り分け → 完了後に軍師QC
+Receive cmd → Bloom Level judgment
+  → L1-L2: Karo assigns directly to ashigaru (skip Gunshi)
+  → L3: Assign to ashigaru → Gunshi QC after completion
+  → L4: Request Gunshi pre-analysis (recommended) → Assign to ashigaru → Gunshi QC after completion
+  → L5-L6: Request Gunshi pre-analysis (required) → Assign to ashigaru → Gunshi QC after completion
 ```
 
 ```
@@ -780,83 +780,83 @@ When Gunshi completes:
 
 ### Quality Control (QC) Routing
 
-**殿の勅命（cmd_079）**: 雑務（L1-L2）以外の全タスクで軍師を経由させよ。
+**Lord's decree (cmd_079)**: Route all tasks except trivial work (L1-L2) through Gunshi.
 
-#### 基本方針: 軍師中心QCフロー
+#### Basic Policy: Gunshi-Centric QC Flow
 
-| Bloom Level | QC担当 | 理由 |
-|-------------|--------|------|
-| L1-L2（雑務） | 家老が直接判定可 | 単純チェック（ファイル存在、形式確認等） |
-| **L3以上** | **軍師に回す（必須）** | 品質判断には深い思考が必要 |
+| Bloom Level | QC Handler | Reason |
+|-------------|-----------|--------|
+| L1-L2 (trivial) | Karo judges directly | Simple checks (file existence, format verification, etc.) |
+| **L3+** | **Route to Gunshi (required)** | Quality judgment requires deep thinking |
 
-#### L1-L2雑務の直接QC（軍師スキップ可）
+#### L1-L2 Direct QC (Gunshi Skippable)
 
-家老が直接処理してよいのは単純作業のみ:
+Karo may handle directly only for simple tasks:
 
 | Check | Example |
 |-------|---------|
 | File existence | `ls -la output.md` |
-| Syntax check | `npm run build` (pass/fail判定) |
+| Syntax check | `npm run build` (pass/fail judgment) |
 | Naming convention | Glob pattern check |
 | Frontmatter fields | Grep verification |
 
-**判定基準**: 思考不要、機械的確認のみ。1分以内に判定可能なもの。
+**Judgment criteria**: No thinking required, mechanical verification only. Decidable within 1 minute.
 
-#### L3以上のQC: 軍師へ委譲（必須）
+#### L3+ QC: Delegate to Gunshi (Required)
 
-足軽完了 → 軍師にQC依頼 → 軍師が品質判定 → 家老に結果報告
+Ashigaru completes → Request Gunshi QC → Gunshi judges quality → Report to Karo
 
-| Task Type | Bloom Level | QC内容 |
-|-----------|-------------|--------|
-| 設計書作成 | L5 | 設計の妥当性、網羅性、実装可能性 |
-| 複数ファイル修正 | L4 | 整合性、副作用、依存関係 |
-| 調査・分析 | L4 | 調査の網羅性、結論の妥当性 |
-| コード実装（複雑） | L3 | コード品質、テスト充足、設計準拠 |
+| Task Type | Bloom Level | QC Content |
+|-----------|-------------|------------|
+| Design document creation | L5 | Design validity, completeness, implementability |
+| Multi-file modification | L4 | Consistency, side effects, dependencies |
+| Investigation/analysis | L4 | Investigation completeness, conclusion validity |
+| Code implementation (complex) | L3 | Code quality, test coverage, design compliance |
 
-#### QC依頼手順（Ashigaru完了後）
+#### QC Request Procedure (After Ashigaru Completion)
 
 ```
-STEP 1: 足軽の完了報告を受信（inbox_write from ashigaru）
-STEP 2: 足軽の報告YAMLを読む（queue/reports/ashigaru{N}_report.yaml）
-STEP 3: Bloom Level判定
-  - L1-L2 → 家老が直接QC → dashboard更新
-  - L3以上 → 軍師にQC依頼（次のステップへ）
-STEP 4: 軍師タスクYAML作成（queue/tasks/gunshi.yaml）
+STEP 1: Receive ashigaru completion report (inbox_write from ashigaru)
+STEP 2: Read ashigaru report YAML (queue/reports/ashigaru{N}_report.yaml)
+STEP 3: Bloom Level judgment
+  - L1-L2 → Karo judges directly → Update dashboard
+  - L3+ → Request Gunshi QC (proceed to next step)
+STEP 4: Create Gunshi task YAML (queue/tasks/gunshi.yaml)
   - type: quality_check
   - target_report: queue/reports/ashigaru{N}_report.yaml
-  - acceptance_criteria: 元cmdの受入基準を転記
+  - acceptance_criteria: Copy from original cmd
 STEP 5: inbox_write to gunshi
-  bash scripts/inbox_write.sh gunshi "足軽{N}号の成果をQCせよ。報告YAML確認されたし。" qc_request karo
-STEP 6: 軍師の結果を待つ（inbox経由で通知が来る）
+  bash scripts/inbox_write.sh gunshi "QC ashigaru{N}'s deliverables. Check report YAML." qc_request karo
+STEP 6: Wait for Gunshi result (notified via inbox)
 ```
 
-#### 事前分析フロー（L4推奨、L5以上必須）
+#### Pre-Analysis Flow (L4 Recommended, L5+ Required)
 
-cmd受信時、足軽に直接振らず、まず軍師に分析させる:
+On cmd reception, request Gunshi analysis first instead of assigning directly to ashigaru:
 
-| Bloom Level | 事前分析 | 理由 |
-|-------------|----------|------|
-| L1-L2 | 不要 | 単純作業、テンプレートあり |
-| L3 | 不要 | 既知パターンの適用 |
-| L4 | 推奨 | 調査の方針・範囲を軍師が決定 |
-| L5-L6 | 必須 | 設計・戦略は軍師の本分 |
+| Bloom Level | Pre-Analysis | Reason |
+|-------------|-------------|--------|
+| L1-L2 | Not needed | Simple tasks, templates available |
+| L3 | Not needed | Applying known patterns |
+| L4 | Recommended | Gunshi determines investigation approach/scope |
+| L5-L6 | Required | Design/strategy is Gunshi's core responsibility |
 
-**事前分析手順**:
+**Pre-analysis procedure**:
 ```
-STEP 1: cmd受信（shogun_to_karo.yaml）
-STEP 2: Bloom Level判定
-  - L1-L3 → 家老が直接足軽に振り分け
-  - L4以上 → 軍師に事前分析依頼
-STEP 3: 軍師タスクYAML作成
+STEP 1: Receive cmd (shogun_to_karo.yaml)
+STEP 2: Bloom Level judgment
+  - L1-L3 → Karo assigns directly to ashigaru
+  - L4+ → Request Gunshi pre-analysis
+STEP 3: Create Gunshi task YAML
   - type: pre_analysis | design | strategy
-  - 元cmdの目的・受入基準を転記
+  - Copy original cmd purpose and acceptance criteria
 STEP 4: inbox_write to gunshi
-STEP 5: 軍師の分析結果を受領 → それを基に足軽タスクYAMLを作成
+STEP 5: Receive Gunshi analysis result → Create ashigaru task YAML based on it
 ```
 
 #### No QC for Ashigaru
 
-**足軽にQCを割り当ててはならない。** 足軽は実装専門。品質判断は家老（L1-L2）または軍師（L3以上）が行う。
+**Never assign QC tasks to ashigaru.** Ashigaru are implementation specialists. Quality judgment is performed by Karo (L1-L2) or Gunshi (L3+).
 
 ## Model Configuration
 

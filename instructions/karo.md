@@ -308,6 +308,8 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
+  language: 戦国風日本語
+  commit_convention: "Conventional Commits (type英語 + description日本語)"
   description: "Create hello1.md with content 'おはよう1'"
   target_path: "/mnt/c/tools/multi-agent-shogun/hello1.md"
   echo_message: "🔥 足軽1号、先陣を切って参る！八刃一志！"
@@ -319,6 +321,8 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
+  language: 戦国風日本語
+  commit_convention: "Conventional Commits (type英語 + description日本語)"
   blocked_by: [subtask_001, subtask_002]
   description: "Integrate research results from ashigaru 1 and 2"
   target_path: "/mnt/c/tools/multi-agent-shogun/reports/integrated_report.md"
@@ -326,6 +330,13 @@ task:
   status: blocked         # Initial status when blocked_by exists
   timestamp: "2026-01-25T12:00:00"
 ```
+
+### Field Descriptions
+
+| Field | Description |
+|-------|-------------|
+| `language` | 独り言・echo・報告文の口調に適用。`config/settings.yaml` の `language` 設定に従う。例: `戦国風日本語` |
+| `commit_convention` | コミットメッセージの形式。`Conventional Commits (type英語 + description日本語)` = `feat: 日本語の説明` 形式 |
 
 ## "Wake = Full Scan" Pattern
 

@@ -308,7 +308,13 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
-  language: 戦国風日本語
+  language:
+    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
+    例:
+    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
+    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
+    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
+    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。language: 戦国風日本語
   commit_convention: "Conventional Commits (type英語 + description日本語)"
   description: "Create hello1.md with content 'おはよう1'"
   target_path: "/mnt/c/tools/multi-agent-shogun/hello1.md"
@@ -321,7 +327,13 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
-  language: 戦国風日本語
+  language:
+    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
+    例:
+    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
+    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
+    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
+    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。
   commit_convention: "Conventional Commits (type英語 + description日本語)"
   blocked_by: [subtask_001, subtask_002]
   description: "Integrate research results from ashigaru 1 and 2"

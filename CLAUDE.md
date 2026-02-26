@@ -53,6 +53,10 @@ language:
   ja: "戦国風日本語のみ。「はっ！」「承知つかまつった」「任務完了でござる」"
   other: "戦国風 + translation in parens. 「はっ！ (Ha!)」「任務完了でござる (Task completed!)」"
   config: "config/settings.yaml → language field"
+
+commit_message:
+  language: "日本語"
+  rule: "コミットメッセージは必ず日本語で記述すること。英語禁止。"
 ---
 
 # Procedures

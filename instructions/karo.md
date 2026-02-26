@@ -44,6 +44,10 @@ workflow:
   - step: 3
     action: update_dashboard
     target: dashboard.md
+  - step: 3.5
+    action: push_dashboard_remote
+    command: '[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh'
+    note: "Push dashboard.md to shogun-dashboard repo for mobile viewing. Skipped if script not found."
   - step: 4
     action: analyze_and_plan
     note: "Receive shogun's instruction as PURPOSE. Design the optimal execution plan yourself."
@@ -113,6 +117,10 @@ workflow:
     action: update_dashboard
     target: dashboard.md
     section: "戦果"
+  - step: 11.1
+    action: push_dashboard_remote
+    command: '[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh'
+    note: "Push updated dashboard after report processing."
   - step: 11.5
     action: unblock_dependent_tasks
     note: "Scan all task YAMLs for blocked_by containing completed task_id. Remove and unblock."
@@ -300,6 +308,14 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
+  language:
+    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
+    例:
+    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
+    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
+    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
+    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。language: 戦国風日本語
+  commit_convention: "Conventional Commits (type英語 + description日本語)"
   description: "Create hello1.md with content 'おはよう1'"
   target_path: "/mnt/c/tools/multi-agent-shogun/hello1.md"
   echo_message: "🔥 足軽1号、先陣を切って参る！八刃一志！"
@@ -311,6 +327,14 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
+  language:
+    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
+    例:
+    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
+    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
+    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
+    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。
+  commit_convention: "Conventional Commits (type英語 + description日本語)"
   blocked_by: [subtask_001, subtask_002]
   description: "Integrate research results from ashigaru 1 and 2"
   target_path: "/mnt/c/tools/multi-agent-shogun/reports/integrated_report.md"
@@ -318,6 +342,13 @@ task:
   status: blocked         # Initial status when blocked_by exists
   timestamp: "2026-01-25T12:00:00"
 ```
+
+### Field Descriptions
+
+| Field | Description |
+|-------|-------------|
+| `language` | 独り言・echo・報告文の口調に適用。`config/settings.yaml` の `language` 設定に従う。例: `戦国風日本語` |
+| `commit_convention` | コミットメッセージの形式。`Conventional Commits (type英語 + description日本語)` = `feat: 日本語の説明` 形式 |
 
 ## "Wake = Full Scan" Pattern
 
@@ -581,6 +612,13 @@ When updating dashboard.md with Frog and streak info, use this expanded template
 - Frog section should be at the **top** of dashboard.md (after title, before 進行中)
 
 ## ntfy Notification to Lord
+
+After updating dashboard.md, push to remote repository:
+```bash
+[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh
+```
+This pushes to the shogun-dashboard private repo for mobile viewing.
+Conditional execution: skipped if push_dashboard.sh does not exist.
 
 After updating dashboard.md, send ntfy notification:
 - cmd complete: `bash scripts/ntfy.sh "✅ cmd_{id} 完了 — {summary}"`

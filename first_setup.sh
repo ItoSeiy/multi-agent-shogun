@@ -44,6 +44,15 @@ log_step() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# sed -i の macOS/Linux 互換ヘルパー関数
+sed_inplace() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 # 結果追跡用変数
 RESULTS=()
 HAS_ERROR=false
@@ -598,6 +607,13 @@ skill:
   # ローカルスキル保存先（このプロジェクト専用）
   local_path: "$SCRIPT_DIR/skills/"
 
+# Dashboard push (auto-push dashboard.md to external repo)
+# Configured by first_setup.sh STEP 12
+dashboard_push:
+  repo: ""
+  branch: "main"
+  subdirectory: ""
+
 # ログ設定
 logging:
   level: info  # debug | info | warn | error
@@ -750,11 +766,11 @@ ALIAS_ADDED=false
 if [ -f "$BASHRC_FILE" ]; then
     # 古い alias 形式を削除（存在する場合）
     if grep -q "alias css=" "$BASHRC_FILE" 2>/dev/null; then
-        sed -i '/alias css=/d' "$BASHRC_FILE"
+        sed_inplace '/alias css=/d' "$BASHRC_FILE"
         log_info "旧 alias css を削除しました"
     fi
     if grep -q "alias csm=" "$BASHRC_FILE" 2>/dev/null; then
-        sed -i '/alias csm=/d' "$BASHRC_FILE"
+        sed_inplace '/alias csm=/d' "$BASHRC_FILE"
         log_info "旧 alias csm を削除しました"
     fi
 
@@ -769,7 +785,7 @@ if [ -f "$BASHRC_FILE" ]; then
         ALIAS_ADDED=true
     else
         # 関数は存在する → 最新版に更新
-        sed -i '/^css()/d' "$BASHRC_FILE"
+        sed_inplace '/^css()/d' "$BASHRC_FILE"
         echo "$CSS_FUNC" >> "$BASHRC_FILE"
         log_info "css 関数を更新しました"
         ALIAS_ADDED=true
@@ -781,7 +797,7 @@ if [ -f "$BASHRC_FILE" ]; then
         log_info "csm 関数を追加しました（家老・足軽ウィンドウ — 自動掃除付き）"
         ALIAS_ADDED=true
     else
-        sed -i '/^csm()/d' "$BASHRC_FILE"
+        sed_inplace '/^csm()/d' "$BASHRC_FILE"
         echo "$CSM_FUNC" >> "$BASHRC_FILE"
         log_info "csm 関数を更新しました"
         ALIAS_ADDED=true
@@ -820,7 +836,7 @@ if [ "$IS_WSL" = true ]; then
                 # [experimental] セクションがあるか確認
                 if grep -q "\[experimental\]" "$WSLCONFIG_PATH" 2>/dev/null; then
                     # [experimental] セクションの直後に追加
-                    sed -i '/\[experimental\]/a autoMemoryReclaim=gradual' "$WSLCONFIG_PATH"
+                    sed_inplace '/\[experimental\]/a autoMemoryReclaim=gradual' "$WSLCONFIG_PATH"
                 else
                     echo "" >> "$WSLCONFIG_PATH"
                     echo "[experimental]" >> "$WSLCONFIG_PATH"
@@ -881,6 +897,71 @@ else
     log_warn "claude コマンドが見つからないため Memory MCP 設定をスキップ"
     RESULTS+=("Memory MCP: スキップ (claude未インストール)")
 fi
+
+# ============================================================
+# STEP 12: Dashboard Push セットアップ（オプション）
+# ============================================================
+log_step "STEP 12: Dashboard Push セットアップ（オプション）"
+log_info "Dashboard push: dashboard.mdを外部リポジトリに自動push"
+echo ""
+read -p "Dashboard pushを設定しますか？ (y/N): " setup_dashboard
+
+if [[ "$setup_dashboard" =~ ^[Yy]$ ]]; then
+    log_info "Dashboard push セットアップを開始します"
+
+    # Repository URL
+    echo ""
+    log_info "GitHubリポジトリを作成してください（private推奨）"
+    echo "例: gh repo create shogun-dashboard --private"
+    echo ""
+    read -p "Repository URL (e.g., git@github.com:user/shogun-dashboard.git): " dashboard_repo
+
+    # Branch
+    read -p "Branch name (default: main): " dashboard_branch
+    dashboard_branch=${dashboard_branch:-main}
+
+    # Subdirectory
+    read -p "Subdirectory (leave empty for root, e.g., 'mac'): " dashboard_subdir
+
+    # Update settings.yaml
+    log_info "settings.yamlを更新中..."
+    SETTINGS_FILE="$SCRIPT_DIR/config/settings.yaml"
+    awk -v repo="$dashboard_repo" -v branch="$dashboard_branch" -v subdir="$dashboard_subdir" '
+    /^dashboard_push:/ { in_section=1 }
+    in_section && /^  repo:/ { print "  repo: \"" repo "\""; next }
+    in_section && /^  branch:/ { print "  branch: \"" branch "\""; next }
+    in_section && /^  subdirectory:/ { print "  subdirectory: \"" subdir "\""; in_section=0; next }
+    { print }
+    ' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+
+    # Clone repository
+    log_info "リポジトリをクローン中..."
+    DASHBOARD_REPO_DIR="$SCRIPT_DIR/.dashboard-repo"
+    if [ -d "$DASHBOARD_REPO_DIR" ]; then
+        rm -rf "$DASHBOARD_REPO_DIR"
+    fi
+
+    if git clone "$dashboard_repo" "$DASHBOARD_REPO_DIR" 2>/dev/null; then
+        log_success "リポジトリクローン完了"
+
+        # Initial push (optional)
+        echo ""
+        read -p "現在のdashboard.mdをpushしますか？ (y/N): " do_push
+        if [[ "$do_push" =~ ^[Yy]$ ]]; then
+            bash "$SCRIPT_DIR/scripts/push_dashboard.sh"
+            log_success "Dashboard初期push完了"
+        fi
+
+        RESULTS+=("Dashboard push: 設定完了 (repo: $dashboard_repo)")
+    else
+        log_error "リポジトリのクローンに失敗しました"
+        RESULTS+=("Dashboard push: クローン失敗（手動設定が必要）")
+    fi
+else
+    log_info "Dashboard pushはスキップされました"
+    RESULTS+=("Dashboard push: スキップ")
+fi
+echo ""
 
 # ============================================================
 # 結果サマリー

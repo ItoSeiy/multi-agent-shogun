@@ -883,6 +883,71 @@ else
 fi
 
 # ============================================================
+# STEP 12: Dashboard Push セットアップ（オプション）
+# ============================================================
+log_step "STEP 12: Dashboard Push セットアップ（オプション）"
+log_info "Dashboard push: dashboard.mdを外部リポジトリに自動push"
+echo ""
+read -p "Dashboard pushを設定しますか？ (y/N): " setup_dashboard
+
+if [[ "$setup_dashboard" =~ ^[Yy]$ ]]; then
+    log_info "Dashboard push セットアップを開始します"
+
+    # Repository URL
+    echo ""
+    log_info "GitHubリポジトリを作成してください（private推奨）"
+    echo "例: gh repo create shogun-dashboard --private"
+    echo ""
+    read -p "Repository URL (e.g., git@github.com:user/shogun-dashboard.git): " dashboard_repo
+
+    # Branch
+    read -p "Branch name (default: main): " dashboard_branch
+    dashboard_branch=${dashboard_branch:-main}
+
+    # Subdirectory
+    read -p "Subdirectory (leave empty for root, e.g., 'mac'): " dashboard_subdir
+
+    # Update settings.yaml
+    log_info "settings.yamlを更新中..."
+    SETTINGS_FILE="$SCRIPT_DIR/config/settings.yaml"
+    awk -v repo="$dashboard_repo" -v branch="$dashboard_branch" -v subdir="$dashboard_subdir" '
+    /^dashboard_push:/ { in_section=1 }
+    in_section && /^  repo:/ { print "  repo: \"" repo "\""; next }
+    in_section && /^  branch:/ { print "  branch: \"" branch "\""; next }
+    in_section && /^  subdirectory:/ { print "  subdirectory: \"" subdir "\""; in_section=0; next }
+    { print }
+    ' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+
+    # Clone repository
+    log_info "リポジトリをクローン中..."
+    DASHBOARD_REPO_DIR="$SCRIPT_DIR/.dashboard-repo"
+    if [ -d "$DASHBOARD_REPO_DIR" ]; then
+        rm -rf "$DASHBOARD_REPO_DIR"
+    fi
+
+    if git clone "$dashboard_repo" "$DASHBOARD_REPO_DIR" 2>/dev/null; then
+        log_success "リポジトリクローン完了"
+
+        # Initial push (optional)
+        echo ""
+        read -p "現在のdashboard.mdをpushしますか？ (y/N): " do_push
+        if [[ "$do_push" =~ ^[Yy]$ ]]; then
+            bash "$SCRIPT_DIR/scripts/push_dashboard.sh"
+            log_success "Dashboard初期push完了"
+        fi
+
+        RESULTS+=("Dashboard push: 設定完了 (repo: $dashboard_repo)")
+    else
+        log_error "リポジトリのクローンに失敗しました"
+        RESULTS+=("Dashboard push: クローン失敗（手動設定が必要）")
+    fi
+else
+    log_info "Dashboard pushはスキップされました"
+    RESULTS+=("Dashboard push: スキップ")
+fi
+echo ""
+
+# ============================================================
 # 結果サマリー
 # ============================================================
 echo ""

@@ -987,6 +987,22 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# STEP 6.9: Dashboard push プリフライトチェック
+# ═══════════════════════════════════════════════════════════════════════════════
+DASHBOARD_REPO=$(grep -A3 'dashboard_push:' ./config/settings.yaml 2>/dev/null | grep 'repo:' | awk '{print $2}' | tr -d '"')
+if [ -n "$DASHBOARD_REPO" ]; then
+    REPO_DIR="$SCRIPT_DIR/.dashboard-repo"
+    if [ ! -d "$REPO_DIR" ]; then
+        log_info "📊 Dashboard push設定済みだがリポジトリ未clone。初回push時に自動clone。"
+    else
+        log_info "📊 Dashboard push設定済み (repo: $DASHBOARD_REPO)"
+    fi
+else
+    log_info "📊 Dashboard push未設定のためスキップ"
+fi
+echo ""
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # STEP 7: 環境確認・完了メッセージ
 # ═══════════════════════════════════════════════════════════════════════════════
 log_info "🔍 陣容を確認中..."

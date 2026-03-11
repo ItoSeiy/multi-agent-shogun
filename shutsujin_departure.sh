@@ -991,6 +991,22 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# STEP 6.9: Dashboard push プリフライトチェック
+# ═══════════════════════════════════════════════════════════════════════════════
+DASHBOARD_REPO=$(grep -A3 'dashboard_push:' ./config/settings.yaml 2>/dev/null | grep 'repo:' | awk '{print $2}' | tr -d '"')
+if [ -n "$DASHBOARD_REPO" ]; then
+    REPO_DIR="$SCRIPT_DIR/.dashboard-repo"
+    if [ ! -d "$REPO_DIR" ]; then
+        log_info "📊 Dashboard push設定済みだがリポジトリ未clone。初回push時に自動clone。"
+    else
+        log_info "📊 Dashboard push設定済み (repo: $DASHBOARD_REPO)"
+    fi
+else
+    log_info "📊 Dashboard push未設定のためスキップ"
+fi
+echo ""
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # STEP 7: 環境確認・完了メッセージ
 # ═══════════════════════════════════════════════════════════════════════════════
 log_info "🔍 陣容を確認中..."
@@ -1021,6 +1037,17 @@ echo "     │ashigaru2│ashigaru5│ gunshi  │"
 echo "     │ (足軽2) │ (足軽5) │ (軍師)  │"
 echo "     └─────────┴─────────┴─────────┘"
 echo ""
+
+# ── caffeinate: スリープ防止 ──
+# 毎回 kill → 再起動で確実に -dims フラグを保証する。
+if [ "$(uname)" = "Darwin" ]; then
+    pkill -x caffeinate 2>/dev/null || true
+    sleep 1
+    nohup caffeinate -ims >/dev/null 2>&1 &
+    disown
+    osascript -e 'display notification "眠りは許さぬ。城は不眠にて守る" with title "☕ 将軍城 — 不眠の陣"' 2>/dev/null || true
+    log_success "  └─ caffeinate -ims 起動（不眠の陣）"
+fi
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════════════╗"

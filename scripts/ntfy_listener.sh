@@ -165,7 +165,8 @@ while true; do
             continue
         fi
 
-        # Auto-reply removed — shogun replies directly after processing.
+        # ACK — 受信確認を即座に返信（将軍の本返信は別途）
+        bash "$SCRIPT_DIR/scripts/ntfy.sh" "📱 受信" &
 
         # Wake shogun via inbox (ntfy処理は将軍が直接受信)
         bash "$SCRIPT_DIR/scripts/inbox_write.sh" shogun \

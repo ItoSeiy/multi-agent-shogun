@@ -329,6 +329,7 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
+  report_to: karo
   language:
     **独り言・進捗報告・思考もすべて戦国風口調で行え。**
     例:
@@ -348,6 +349,7 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
+  report_to: karo
   language:
     **独り言・進捗報告・思考もすべて戦国風口調で行え。**
     例:
@@ -368,8 +370,24 @@ task:
 
 | Field | Description |
 |-------|-------------|
+| `report_to` | タスク完了レポートの宛先。`karo` または `gunshi` を設定する。 |
 | `language` | 独り言・echo・報告文の口調に適用。`config/settings.yaml` の `language` 設定に従う。例: `戦国風日本語` |
 | `commit_convention` | コミットメッセージの形式。`Conventional Commits (type英語 + description日本語)` = `feat: 日本語の説明` 形式 |
+
+### 報告ステップ（必須 — 全タスクYAMLに含めること）
+
+Codex/Spark系の足軽は報告ステップをスキップしやすい。全タスクYAMLのdescription末尾に以下をリテラルで含めること:
+
+```
+## ★★★ 完了後（必ず実行）★★★
+1. queue/reports/{agent_id}_report.yaml にレポートを書き込む（task_id, cmd_id, status, summary）
+2. 以下のコマンドを実行:
+   bash scripts/inbox_write.sh {report_to} "{agent_id}、任務完了。報告書を確認されよ。" report_received {agent_id}
+3. queue/tasks/{agent_id}.yaml の status を done に更新
+```
+
+**{agent_id}は実際のエージェントID（ashigaru1等）に置換すること。**
+このステップがないと報告が家老に届かず、タスクが完了扱いにならない。
 
 ## "Wake = Full Scan" Pattern
 
@@ -865,6 +883,19 @@ Route these to Gunshi via `queue/tasks/gunshi.yaml`:
 | Design review | L5 Evaluate | Requires architectural judgment |
 | Root cause investigation | L4 Analyze | Deep reasoning needed |
 | Architecture analysis | L5-L6 | Multi-factor evaluation |
+
+### report_to 決定ルール
+
+タスクYAML生成時に以下の基準で`report_to`を設定する:
+
+| タスク種別 | report_to | 理由 |
+|-----------|-----------|------|
+| 設計レビュー、品質判定（L5-L6） | gunshi | 深い分析が必要 |
+| 根本原因調査（L4） | gunshi | 推論が必要 |
+| 実装・コード変更（L1-L3） | gunshi | コード品質チェック |
+| worktree削除、PR作成、軽量修正 | karo | 機械的確認で十分 |
+| ブランチ削除、環境整備 | karo | 判定不要 |
+| 軍師自身のタスク | karo | 自己QC不可 |
 
 #### No QC for Ashigaru
 

@@ -190,7 +190,7 @@ Race condition is eliminated: `/clear` wipes old context. Agent re-reads YAML wi
 
 | Direction | Method | Reason |
 |-----------|--------|--------|
-| Ashigaru → Gunshi | Report YAML + inbox_write | Quality check & dashboard aggregation |
+| Ashigaru → {report_to} | Report YAML + inbox_write | report_toはタスクYAMLで指定（karo or gunshi） |
 | Gunshi → Karo | Report YAML + inbox_write | Quality check result + strategic reports |
 | Karo → Shogun/Lord | dashboard.md update only | **inbox to shogun FORBIDDEN** — prevents interrupting Lord's input |
 | Karo → Gunshi | YAML + inbox_write | Strategic task or quality check delegation |

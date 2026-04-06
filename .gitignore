@@ -131,6 +131,20 @@
 !images/screenshots/hero/latest-translucent-20260208-084602.png
 
 # Skills (public OSS skills committed to repo)
+!.claude/skills/
+!.claude/skills/skill-creator/
+!.claude/skills/skill-creator/SKILL.md
+!.claude/skills/shogun-agent-status/
+!.claude/skills/shogun-agent-status/SKILL.md
+!.claude/skills/shogun-model-list/
+!.claude/skills/shogun-model-list/SKILL.md
+!.claude/skills/shogun-bloom-config/
+!.claude/skills/shogun-bloom-config/SKILL.md
+!.claude/skills/shogun-model-switch/
+!.claude/skills/shogun-model-switch/SKILL.md
+!.claude/skills/shogun-readme-sync/
+!.claude/skills/shogun-readme-sync/SKILL.md
+
 !skills/
 !skills/skill-creator/
 !skills/skill-creator/SKILL.md
@@ -185,6 +199,10 @@ tests/specs/osato_lms_*
 !.github/
 !.github/workflows/
 !.github/workflows/*.yml
+
+
+# Dashboard push local clone
+.dashboard-repo/
 
 # Android companion app
 !android/

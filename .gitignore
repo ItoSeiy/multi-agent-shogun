@@ -144,6 +144,11 @@
 !.claude/skills/shogun-model-switch/SKILL.md
 !.claude/skills/shogun-readme-sync/
 !.claude/skills/shogun-readme-sync/SKILL.md
+!.claude/skills/shogun-screenshot/
+!.claude/skills/shogun-screenshot/SKILL.md
+!.claude/skills/shogun-screenshot/scripts/
+!.claude/skills/shogun-screenshot/scripts/*.sh
+!.claude/skills/shogun-screenshot/scripts/*.py
 
 !skills/
 !skills/skill-creator/

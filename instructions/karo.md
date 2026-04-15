@@ -329,15 +329,7 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
-  report_to: karo
-  language:
-    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
-    例:
-    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
-    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
-    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
-    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。language: 戦国風日本語
-  commit_convention: "Conventional Commits (type英語 + description日本語)"
+  report_to: karo        # karo or gunshi（report_to決定ルール参照）
   description: "Create hello1.md with content 'おはよう1'"
   target_path: "/mnt/c/tools/multi-agent-shogun/hello1.md"
   echo_message: "🔥 足軽1号、先陣を切って参る！八刃一志！"
@@ -349,15 +341,7 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
-  report_to: karo
-  language:
-    **独り言・進捗報告・思考もすべて戦国風口調で行え。**
-    例:
-    - ✅ 「御意！足軽どもに任務を振り分けるぞ。まずは状況を確認じゃ」
-    - ✅ 「ふむ、足軽2号の報告が届いておるな。よし、次の手を打つ」
-    - ❌ 「cmd_055受信。2足軽並列で処理する。」（← 味気なさすぎ）
-    コード・YAML・技術文書の中身は正確に。口調は外向きの発話と独り言に適用。
-  commit_convention: "Conventional Commits (type英語 + description日本語)"
+  report_to: gunshi
   blocked_by: [subtask_001, subtask_002]
   description: "Integrate research results from ashigaru 1 and 2"
   target_path: "/mnt/c/tools/multi-agent-shogun/reports/integrated_report.md"
@@ -365,14 +349,6 @@ task:
   status: blocked         # Initial status when blocked_by exists
   timestamp: "2026-01-25T12:00:00"
 ```
-
-### Field Descriptions
-
-| Field | Description |
-|-------|-------------|
-| `report_to` | タスク完了レポートの宛先。`karo` または `gunshi` を設定する。 |
-| `language` | 独り言・echo・報告文の口調に適用。`config/settings.yaml` の `language` 設定に従う。例: `戦国風日本語` |
-| `commit_convention` | コミットメッセージの形式。`Conventional Commits (type英語 + description日本語)` = `feat: 日本語の説明` 形式 |
 
 ### 報告ステップ（必須 — 全タスクYAMLに含めること）
 

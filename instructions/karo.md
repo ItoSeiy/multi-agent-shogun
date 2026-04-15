@@ -350,6 +350,19 @@ task:
   timestamp: "2026-01-25T12:00:00"
 ```
 
+### report_to 決定ルール
+
+タスクYAML生成時に以下の基準で`report_to`を設定する:
+
+| タスク種別 | report_to | 理由 |
+|-----------|-----------|------|
+| 設計レビュー、品質判定（L5-L6） | gunshi | 深い分析が必要 |
+| 根本原因調査（L4） | gunshi | 推論が必要 |
+| 実装・コード変更（L1-L3） | gunshi | コード品質チェック |
+| worktree削除、PR作成、軽量修正 | karo | 機械的確認で十分 |
+| ブランチ削除、環境整備 | karo | 判定不要 |
+| 軍師自身のタスク | karo | 自己QC不可 |
+
 ### 報告ステップ（必須 — 全タスクYAMLに含めること）
 
 Codex/Spark系の足軽は報告ステップをスキップしやすい。全タスクYAMLのdescription末尾に以下をリテラルで含めること:
@@ -859,19 +872,6 @@ Route these to Gunshi via `queue/tasks/gunshi.yaml`:
 | Design review | L5 Evaluate | Requires architectural judgment |
 | Root cause investigation | L4 Analyze | Deep reasoning needed |
 | Architecture analysis | L5-L6 | Multi-factor evaluation |
-
-### report_to 決定ルール
-
-タスクYAML生成時に以下の基準で`report_to`を設定する:
-
-| タスク種別 | report_to | 理由 |
-|-----------|-----------|------|
-| 設計レビュー、品質判定（L5-L6） | gunshi | 深い分析が必要 |
-| 根本原因調査（L4） | gunshi | 推論が必要 |
-| 実装・コード変更（L1-L3） | gunshi | コード品質チェック |
-| worktree削除、PR作成、軽量修正 | karo | 機械的確認で十分 |
-| ブランチ削除、環境整備 | karo | 判定不要 |
-| 軍師自身のタスク | karo | 自己QC不可 |
 
 #### No QC for Ashigaru
 

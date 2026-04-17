@@ -114,14 +114,14 @@ workflow:
   - step: 8
     action: check_pending
     note: "If pending cmds remain in shogun_to_karo.yaml → loop to step 2. Otherwise stop."
-  # NOTE: No background monitor needed. Gunshi sends inbox_write on QC completion.
-  # Ashigaru → Gunshi (quality check) → Karo (notification). Fully event-driven.
+  # NOTE: No background monitor needed. Ashigaru and Gunshi send inbox_write on completion.
+  # Ashigaru → Karo (notification). Gunshi QC is dispatched separately via queue/tasks/gunshi.yaml.
   # === Report Reception Phase ===
   - step: 9
     action: receive_wakeup
-    from: gunshi
+    from: ashigaru_or_gunshi
     via: inbox
-    note: "Gunshi reports QC results. Ashigaru no longer reports directly to Karo."
+    note: "Ashigaru and Gunshi both report to Karo via inbox_write."
   - step: 10
     action: scan_all_reports
     target: "queue/reports/ashigaru*_report.yaml + queue/reports/gunshi_report.yaml"
@@ -329,7 +329,6 @@ task:
   task_id: subtask_001
   parent_cmd: cmd_001
   bloom_level: L3        # L1-L3=Ashigaru, L4-L6=Gunshi
-  report_to: karo        # karo or gunshi（report_to決定ルール参照）
   description: "Create hello1.md with content 'おはよう1'"
   target_path: "/mnt/c/tools/multi-agent-shogun/hello1.md"
   echo_message: "🔥 足軽1号、先陣を切って参る！八刃一志！"
@@ -341,7 +340,6 @@ task:
   task_id: subtask_003
   parent_cmd: cmd_001
   bloom_level: L6
-  report_to: gunshi
   blocked_by: [subtask_001, subtask_002]
   description: "Integrate research results from ashigaru 1 and 2"
   target_path: "/mnt/c/tools/multi-agent-shogun/reports/integrated_report.md"
@@ -349,19 +347,6 @@ task:
   status: blocked         # Initial status when blocked_by exists
   timestamp: "2026-01-25T12:00:00"
 ```
-
-### report_to 決定ルール
-
-タスクYAML生成時に以下の基準で`report_to`を設定する:
-
-| タスク種別 | report_to | 理由 |
-|-----------|-----------|------|
-| 設計レビュー、品質判定（L5-L6） | gunshi | 深い分析が必要 |
-| 根本原因調査（L4） | gunshi | 推論が必要 |
-| 実装・コード変更（L1-L3） | gunshi | コード品質チェック |
-| worktree削除、PR作成、軽量修正 | karo | 機械的確認で十分 |
-| ブランチ削除、環境整備 | karo | 判定不要 |
-| 軍師自身のタスク | karo | 自己QC不可 |
 
 ### 報告ステップ（必須 — 全タスクYAMLに含めること）
 
@@ -371,7 +356,7 @@ Codex/Spark系の足軽は報告ステップをスキップしやすい。全タ
 ## ★★★ 完了後（必ず実行）★★★
 1. queue/reports/{agent_id}_report.yaml にレポートを書き込む（task_id, cmd_id, status, summary）
 2. 以下のコマンドを実行:
-   bash scripts/inbox_write.sh {report_to} "{agent_id}、任務完了。報告書を確認されよ。" report_received {agent_id}
+   bash scripts/inbox_write.sh karo "{agent_id}、任務完了。報告書を確認されよ。" report_received {agent_id}
 3. queue/tasks/{agent_id}.yaml の status を done に更新
 ```
 

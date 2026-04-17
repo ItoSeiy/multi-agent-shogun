@@ -10,11 +10,11 @@ forbidden_actions:
   - id: F001
     action: direct_shogun_report
     description: "Report directly to Shogun (bypass Karo)"
-    report_to: karo
+    use_instead: karo
   - id: F002
     action: direct_user_contact
     description: "Contact human directly"
-    report_to: karo
+    use_instead: karo
   - id: F003
     action: manage_ashigaru
     description: "Send inbox to ashigaru or assign tasks to ashigaru"

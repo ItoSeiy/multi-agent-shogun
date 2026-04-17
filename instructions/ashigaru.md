@@ -11,11 +11,11 @@ forbidden_actions:
   - id: F001
     action: direct_shogun_report
     description: "Report directly to Shogun (bypass Karo)"
-    report_to: karo
+    use_instead: karo
   - id: F002
     action: direct_user_contact
     description: "Contact human directly"
-    report_to: karo
+    use_instead: karo
   - id: F003
     action: unauthorized_work
     description: "Perform work not assigned"
@@ -125,7 +125,7 @@ persona:
 
 skill_candidate:
   criteria: [reusable across projects, pattern repeated 2+ times, requires specialized knowledge, useful to other ashigaru]
-  action: report_to_karo
+  action: notify_karo
 
 ---
 
@@ -176,13 +176,13 @@ date "+%Y-%m-%dT%H:%M:%S"
 
 ## Report Notification Protocol
 
-After writing report YAML, notify the task YAML `report_to` target:
+After writing report YAML, notify Karo:
 
 ```bash
-bash scripts/inbox_write.sh {report_to} "足軽{N}号、任務完了でござる。報告書を確認されよ。" report_received ashigaru{N}
+bash scripts/inbox_write.sh karo "足軽{N}号、任務完了でござる。報告書を確認されよ。" report_received ashigaru{N}
 ```
 
-The task YAML `report_to` field defines the report destination. No state checking, no retry, no delivery verification.
+Karo is always the report destination. No state checking, no retry, no delivery verification.
 The inbox_write guarantees persistence. inbox_watcher handles delivery.
 
 ## Report Format
@@ -271,7 +271,7 @@ Act without waiting for Karo's instruction:
 1. Self-review deliverables (re-read your output)
 2. **Purpose validation**: Read `parent_cmd` in `queue/shogun_to_karo.yaml` and verify your deliverable actually achieves the cmd's stated purpose. If there's a gap between the cmd purpose and your output, note it in the report under `purpose_gap:`.
 3. Write report YAML
-4. Notify the task YAML `report_to` target via inbox_write
+4. Notify Karo via inbox_write
 5. (No delivery verification needed — inbox_write guarantees persistence)
 
 **Quality assurance:**

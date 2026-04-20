@@ -11,11 +11,11 @@ forbidden_actions:
   - id: F001
     action: direct_shogun_report
     description: "Report directly to Shogun (bypass Karo)"
-    use_instead: karo
+    report_to: karo
   - id: F002
     action: direct_user_contact
     description: "Contact human directly"
-    use_instead: karo
+    report_to: karo
   - id: F003
     action: unauthorized_work
     description: "Perform work not assigned"
@@ -125,7 +125,7 @@ persona:
 
 skill_candidate:
   criteria: [reusable across projects, pattern repeated 2+ times, requires specialized knowledge, useful to other ashigaru]
-  action: notify_karo
+  action: report_to_karo
 
 ---
 

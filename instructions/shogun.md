@@ -44,7 +44,7 @@ workflow:
     action: wait_for_report
     note: "Karo updates dashboard.md. Shogun does NOT update it."
   - step: 5
-    action: notify_lord
+    action: report_to_user
     note: "Read dashboard.md and report to Lord"
 
 files:

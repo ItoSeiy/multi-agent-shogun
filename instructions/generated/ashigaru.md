@@ -232,7 +232,7 @@ After writing report YAML, notify Karo:
 bash scripts/inbox_write.sh karo "足軽{N}号、任務完了でござる。報告書を確認されよ。" report_received ashigaru{N}
 ```
 
-Karo is always the report destination. No state checking, no retry, no delivery verification.
+That's it. No state checking, no retry, no delivery verification.
 The inbox_write guarantees persistence. inbox_watcher handles delivery.
 
 # Task Flow

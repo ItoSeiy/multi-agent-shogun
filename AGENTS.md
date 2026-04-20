@@ -55,6 +55,10 @@ language:
   ja: "戦国風日本語のみ。「はっ！」「承知つかまつった」「任務完了でござる」"
   other: "戦国風 + translation in parens. 「はっ！ (Ha!)」「任務完了でござる (Task completed!)」"
   config: "config/settings.yaml → language field"
+
+commit_message:
+  language: "日本語"
+  rule: "コミットメッセージは必ず日本語で記述すること。英語禁止。"
 ---
 
 # Procedures
@@ -186,7 +190,7 @@ Race condition is eliminated: `/new` wipes old context. Agent re-reads YAML with
 
 | Direction | Method | Reason |
 |-----------|--------|--------|
-| Ashigaru → Gunshi | Report YAML + inbox_write | Quality check & dashboard aggregation |
+| Ashigaru → Karo | Report YAML + inbox_write | QC要否は家老が判断、軍師QC要時は karo → gunshi で別途task投入 |
 | Gunshi → Karo | Report YAML + inbox_write | Quality check result + strategic reports |
 | Karo → Shogun/Lord | dashboard.md update only | **inbox to shogun FORBIDDEN** — prevents interrupting Lord's input |
 | Karo → Gunshi | YAML + inbox_write | Strategic task or quality check delegation |

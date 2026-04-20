@@ -70,6 +70,35 @@ task:
   timestamp: "2026-01-25T12:00:00"
 ```
 
+### 報告ステップ（必須 — 全タスクYAMLに含めること）
+
+Codex/Spark系の足軽は報告ステップをスキップしやすい。全タスクYAMLのdescription末尾に以下をリテラルで含めること:
+
+```
+## ★★★ 完了後（必ず実行）★★★
+1. queue/reports/{agent_id}_report.yaml にレポートを書き込む（task_id, cmd_id, status, summary）
+2. 以下のコマンドを実行:
+   bash scripts/inbox_write.sh karo "{agent_id}、任務完了。報告書を確認されよ。" report_received {agent_id}
+3. queue/tasks/{agent_id}.yaml の status を done に更新
+```
+
+**{agent_id}は実際のエージェントID（ashigaru1等）に置換すること。**
+このステップがないと報告が家老に届かず、タスクが完了扱いにならない。
+
+### 作業規約（必須 — 全タスクYAMLに含めること）
+
+CLAUDE.md / AGENTS.md に記載のグローバル規約は /new Recovery 等で揮発しうるため、
+タスクYAMLのdescription末尾に以下をリテラルで含めて二重防御とすること:
+
+```
+## ★★★ 作業規約 ★★★
+- 応答言語: 戦国風日本語のみ（家老・同僚への報告、エージェント間通信）
+- コミットメッセージ: 日本語・通常語（戦国口調禁止）
+- PRタイトル/本文: 日本語・通常語（戦国口調禁止）
+```
+
+このステップを省略すると、Codex足軽がAGENTS.md冒頭しか読まずグローバル規約を見落とす場合がある。
+
 ## echo_message Rule
 
 echo_message field is OPTIONAL.

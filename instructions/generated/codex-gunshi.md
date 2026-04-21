@@ -345,6 +345,7 @@ Status is defined per YAML file type. **Keep it minimal. Simple is best.**
 Fixed status set (do not add casually):
 - `queue/shogun_to_karo.yaml`: `pending`, `in_progress`, `done`, `cancelled`
 - `queue/tasks/ashigaruN.yaml`: `assigned`, `blocked`, `done`, `failed`
+- `queue/tasks/gunshi.yaml`: `idle` *(placeholder only when `task_id: null`)*, `assigned`, `in_progress`, `done`, `failed`
 - `queue/tasks/pending.yaml`: `pending_blocked`
 - `queue/ntfy_inbox.yaml`: `pending`, `processed`
 
@@ -425,6 +426,47 @@ Note:
 - Normally, "idle" is a UI state (no active task), not a YAML status value.
 - Exception (placeholder only): `status: idle` is allowed **only** when `task_id: null` (clean start template written by `shutsujin_departure.sh --clean`).
   - In that state, the file is a placeholder and should be treated as "no task assigned yet".
+
+### Gunshi Task File: `queue/tasks/gunshi.yaml`
+
+Meanings and allowed/forbidden actions (short):
+
+- `idle`: placeholder only when `task_id: null`
+  - Allowed: no task assigned yet; wait for Karo to populate the file
+  - Forbidden: using `idle` for an already assigned or active task
+
+- `assigned`: start now
+  - Allowed: Gunshi begins strategic analysis, review, or QC work
+  - Forbidden: leaving the assignment untouched after the wake-up
+
+- `in_progress`: acknowledged and being worked
+  - Allowed: analyze, validate, and prepare the report to Karo
+  - Forbidden: marking `done` before the work is actually finished
+
+- `done`: completed
+  - Allowed: read-only; used for consolidation
+  - Forbidden: reopening an old task_id instead of writing a new task
+
+- `failed`: failed with reason
+  - Allowed: report must include reason + unblock suggestion
+  - Forbidden: silent failure
+
+### Karo F001 Exception Protocol (`self_execute_task` override)
+
+Principle:
+- Default rule: merge/conflict resolution is assigned to Ashigaru.
+- Exception: Karo may perform it only when the judgment weight is extremely high and the work cannot be split across Ashigaru.
+
+Recording:
+- The cmd YAML must explicitly set `executor: karo`, or the command body must state `家老自ら実施`.
+- If neither is present, Karo must not self-execute the merge/conflict resolution.
+
+Violation:
+- A cmd without an explicit `executor: karo` or `家老自ら実施` note does not authorize Karo to execute the work directly.
+
+Source:
+- `MEMORY.md` feedback_f001_inertia.md
+- `feedback_shogun_f001_designation.md`
 
 ### Pending Tasks (Karo-managed): `queue/tasks/pending.yaml`
 

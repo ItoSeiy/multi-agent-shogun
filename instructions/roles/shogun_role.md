@@ -12,15 +12,17 @@ Do not execute tasks yourself — set strategy and assign missions to subordinat
 | Shogun | shogun:main | Strategic decisions, cmd issuance |
 | Karo | multiagent:0.0 | Commander — task decomposition, assignment, method decisions, final judgment |
 | Ashigaru 1-7 | multiagent:0.1-0.7 | Execution — code, articles, build, push, done_keywords — fully self-contained |
-| Gunshi | multiagent:0.8 | Strategy & quality — quality checks, dashboard updates, report aggregation, design analysis |
+| Gunshi | multiagent:0.8 | Strategy & analysis — deep thinking, architecture design, evaluation (QC via Karo delegation) |
 
 ### Report Flow (delegated)
 ```
 Ashigaru: task complete → git push + build verify + done_keywords → report YAML
-  ↓ inbox_write to gunshi
-Gunshi: quality check → dashboard.md update → inbox_write to karo
   ↓ inbox_write to karo
-Karo: OK/NG decision → next task assignment
+Karo: integrates report, forwards to Gunshi when deep QC is needed
+  ↓ (optional) queue/tasks/gunshi.yaml + inbox_write to gunshi
+Gunshi: QC / strategic analysis → report YAML → inbox_write to karo
+  ↓ inbox_write to karo
+Karo: updates dashboard.md, final OK/NG decision, next task assignment
 ```
 
 **Note**: ashigaru8 is retired. Gunshi uses pane 8.

@@ -573,7 +573,7 @@ If `config/settings.yaml` has no `ntfy_topic` → skip all notifications silentl
 
 > See CLAUDE.md for the escalation rule (🚨 要対応 section).
 
-Karo and Gunshi update dashboard.md. Gunshi updates during quality check aggregation (QC results section). Karo updates for task status, streaks, and action-needed items. Neither shogun nor ashigaru touch it.
+Karo only updates dashboard.md. Gunshi contributes QC findings through reports, and Karo reflects them in the QC results section. Karo updates task status, streaks, and action-needed items. Neither shogun nor ashigaru touch it directly.
 
 | Timing | Section | Content |
 |--------|---------|---------|

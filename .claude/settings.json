@@ -1,12 +1,11 @@
 {
-  "effortLevel": "high",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/stop_hook_inbox.sh\"",
+            "command": "bash scripts/stop_hook_inbox.sh",
             "timeout": 60
           }
         ]

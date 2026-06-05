@@ -17,6 +17,7 @@
 !LICENSE
 !README.md
 !README_ja.md
+!CHANGELOG.md
 !CONTRIBUTING.md
 !SECURITY.md
 
@@ -37,6 +38,7 @@
 !instructions/cli_specific/codex_tools.md
 !instructions/cli_specific/copilot_tools.md
 !instructions/cli_specific/kimi_tools.md
+!instructions/cli_specific/opencode_tools.md
 
 # Multi-CLI: Build template parts (roles, common sections)
 !instructions/roles/
@@ -53,9 +55,18 @@
 !lib/cli_adapter.sh
 !lib/ntfy_auth.sh
 !lib/agent_status.sh
+!lib/agent_registry.sh
 
 # Multi-CLI: Codex auto-load file
 !AGENTS.md
+
+# Multi-CLI: OpenCode agent file
+!.opencode/agents/*.md
+.opencode/agents/*-runtime.md
+
+# Multi-CLI: OpenCode custom tools
+!.opencode/tools/
+!.opencode/tools/mark-as-read.ts
 
 # Setup and deployment scripts
 !shutsujin_departure.sh
@@ -69,6 +80,8 @@
 # Config (sample files only, no secrets)
 !config/
 !config/ntfy_auth.env.sample
+!config/opencode-tui.json
+!config/opencode-permissions.yaml
 
 # Templates
 !templates/
@@ -94,9 +107,11 @@
 !scripts/seo_qc.py
 !scripts/seo_qc.sh
 !scripts/stop_hook_inbox.sh
+!scripts/session_start_hook.sh
 !scripts/agent_status.sh
 !scripts/ratelimit_check.sh
 !scripts/switch_cli.sh
+!scripts/dashboard-viewer.py
 
 
 # SayTask (sample template only, not actual data)
@@ -104,6 +119,7 @@
 !saytask/streaks.yaml.sample
 
 # Reports (private — not tracked)
+logs/
 
 # Memory (MEMORY.md is private; only the sample template is OSS)
 !memory/
@@ -112,6 +128,7 @@
 # Docs
 !docs/
 !docs/philosophy.md
+!docs/vps_pr118_verification_plan.md
 
 # Screenshots (masked — no secrets)
 !images/
@@ -143,10 +160,20 @@
 !skills/shogun-model-switch/SKILL.md
 !skills/shogun-readme-sync/
 !skills/shogun-readme-sync/SKILL.md
+!skills/shogun-screenshot/
+!skills/shogun-screenshot/SKILL.md
+!skills/shogun-screenshot/scripts/
+!skills/shogun-screenshot/scripts/*.sh
+!skills/shogun-screenshot/scripts/*.py
+
+# Python venv (explicit deny — whitelist patterns like LICENSE leak through !*/)
+.venv/
 
 # Test specs
 !tests/specs/
 !tests/specs/*.md
+# Client project specs (not OSS — re-exclude after whitelist)
+tests/specs/osato_lms_*
 
 # Tests
 !tests/
@@ -172,8 +199,19 @@
 
 # CI/CD
 !.github/
+!.github/FUNDING.yml
 !.github/workflows/
 !.github/workflows/*.yml
 
 # Dashboard push local clone
 .dashboard-repo/
+
+# Android companion app
+!android/
+!android/**
+
+# reports/ (empty placeholder only — content is intentionally local-only)
+!reports/
+!reports/.gitkeep
+
+.claude/settings.local.json

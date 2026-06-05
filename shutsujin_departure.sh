@@ -6,6 +6,8 @@
 #   ./shutsujin_departure.sh           # 全エージェント起動（前回の状態を維持）
 #   ./shutsujin_departure.sh -c        # キューをリセットして起動（クリーンスタート）
 #   ./shutsujin_departure.sh -s        # セットアップのみ（Claude起動なし）
+#   ./shutsujin_departure.sh --auto-mode-on          # Claude permission auto-approved で起動
+#   ./shutsujin_departure.sh --permission-mode plan  # Claude permission mode を明示指定
 #   ./shutsujin_departure.sh -h        # ヘルプ表示
 
 set -e
@@ -81,6 +83,15 @@ log_war() {
     echo -e "\033[1;31m【戦】\033[0m $1"
 }
 
+# OpenCode は複数プロセスを短時間に連続起動すると WSL2 上で SIGILL に
+# なることがあるため、OpenCode のときだけ起動間隔を少し空ける。
+opencode_startup_delay() {
+    local cli_type="$1"
+    if [ "$cli_type" = "opencode" ]; then
+        sleep 0.1
+    fi
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # プロンプト生成関数（bash/zsh対応）
 # ───────────────────────────────────────────────────────────────────────────────
@@ -121,6 +132,8 @@ KESSEN_MODE=false
 SHOGUN_NO_THINKING=false
 SILENT_MODE=false
 SHELL_OVERRIDE=""
+# Permission flag (default: dangerously-skip-permissions for backward compat)
+PERMISSION_FLAG="--dangerously-skip-permissions"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -143,6 +156,19 @@ while [[ $# -gt 0 ]]; do
         --shogun-no-thinking)
             SHOGUN_NO_THINKING=true
             shift
+            ;;
+        --auto-mode-on)
+            PERMISSION_FLAG="--permission-mode auto-approved"
+            shift
+            ;;
+        --permission-mode)
+            if [[ -n "$2" && "$2" != -* ]]; then
+                PERMISSION_FLAG="--permission-mode $2"
+                shift 2
+            else
+                echo "エラー: --permission-mode オプションにはモード名を指定してください"
+                exit 1
+            fi
             ;;
         -S|--silent)
             SILENT_MODE=true
@@ -172,6 +198,8 @@ while [[ $# -gt 0 ]]; do
             echo "  -t, --terminal      Windows Terminal で新しいタブを開く"
             echo "  -shell, --shell SH  シェルを指定（bash または zsh）"
             echo "                      未指定時は config/settings.yaml の設定を使用"
+            echo "  --auto-mode-on      Claude を --permission-mode auto-approved で起動"
+            echo "  --permission-mode M Claude の permission mode を明示指定"
             echo "  -S, --silent        サイレントモード（足軽の戦国echo表示を無効化・API節約）"
             echo "                      未指定時はshoutモード（タスク完了時に戦国風echo表示）"
             echo "  -h, --help          このヘルプを表示"
@@ -186,6 +214,8 @@ while [[ $# -gt 0 ]]; do
             echo "  ./shutsujin_departure.sh -c -k         # クリーンスタート＋決戦の陣"
             echo "  ./shutsujin_departure.sh -shell zsh   # zsh用プロンプトで起動"
             echo "  ./shutsujin_departure.sh --shogun-no-thinking  # 将軍のthinkingを無効化（中継特化）"
+            echo "  ./shutsujin_departure.sh --auto-mode-on        # permission auto-approved で起動"
+            echo "  ./shutsujin_departure.sh --permission-mode plan  # permission mode を明示指定"
             echo "  ./shutsujin_departure.sh -S           # サイレントモード（echo表示なし）"
             echo ""
             echo "モデル構成:"
@@ -203,7 +233,7 @@ while [[ $# -gt 0 ]]; do
             echo "  silent（--silent）:   echo表示なし（API節約）"
             echo ""
             echo "エイリアス:"
-            echo "  csst  → cd /mnt/c/tools/multi-agent-shogun && ./shutsujin_departure.sh"
+            echo "  csst  → cd $HOME/multi-agent-shogun && ./shutsujin_departure.sh"
             echo "  css   → tmux attach-session -t shogun"
             echo "  csm   → tmux attach-session -t multiagent"
             echo ""
@@ -652,11 +682,15 @@ if [ "$SETUP_ONLY" = false ]; then
         fi
     fi
 
+    # 前セッションのstaleフラグをクリア
+    rm -f /tmp/shogun_idle_*
+    echo "idle flags cleared"
+
     log_war "👑 全軍に Claude Code を召喚中..."
 
     # 将軍: CLI Adapter経由でコマンド構築
     _shogun_cli_type="claude"
-    _shogun_cmd="claude --model opus --dangerously-skip-permissions"
+    _shogun_cmd="claude --model opus --effort max $PERMISSION_FLAG"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _shogun_cli_type=$(get_cli_type "shogun")
         _shogun_cmd=$(build_cli_command "shogun")
@@ -676,6 +710,7 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
     tmux set-option -p -t "shogun:main" @agent_cli "$_shogun_cli_type"
     tmux send-keys -t shogun:main "$_shogun_cmd"
     tmux send-keys -t shogun:main Enter
+    opencode_startup_delay "$_shogun_cli_type"
     _shogun_display=$(get_model_display_name "shogun" 2>/dev/null || echo "Opus")
     tmux set-option -p -t "shogun:main" @model_name "$_shogun_display" 2>/dev/null || true
     log_info "  └─ 将軍（${_shogun_cli_type} / ${_shogun_display}）、召喚完了"
@@ -686,19 +721,15 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
     # 家老（pane 0）: CLI Adapter経由でコマンド構築（デフォルト: Sonnet）
     p=$((PANE_BASE + 0))
     _karo_cli_type="claude"
-    _karo_cmd="claude --model sonnet --dangerously-skip-permissions"
+    _karo_cmd="claude --model sonnet --effort max $PERMISSION_FLAG"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _karo_cli_type=$(get_cli_type "karo")
         _karo_cmd=$(build_cli_command "karo")
     fi
-    # Codex等の初期プロンプト付加（サジェストUI停止問題対策）
-    _startup_prompt=$(get_startup_prompt "karo" 2>/dev/null)
-    if [[ -n "$_startup_prompt" ]]; then
-        _karo_cmd="$_karo_cmd \"$_startup_prompt\""
-    fi
     tmux set-option -p -t "multiagent:agents.${p}" @agent_cli "$_karo_cli_type"
     tmux send-keys -t "multiagent:agents.${p}" "$_karo_cmd"
     tmux send-keys -t "multiagent:agents.${p}" Enter
+    opencode_startup_delay "$_karo_cli_type"
     _karo_display=$(get_model_display_name "karo" 2>/dev/null || echo "Sonnet")
     tmux set-option -p -t "multiagent:agents.${p}" @model_name "$_karo_display" 2>/dev/null || true
     log_info "  └─ 家老（${_karo_display}）、召喚完了"
@@ -708,23 +739,19 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
         for i in $(seq 1 "$_ASHIGARU_COUNT"); do
             p=$((PANE_BASE + i))
             _ashi_cli_type="claude"
-            _ashi_cmd="claude --model opus --dangerously-skip-permissions"
+            _ashi_cmd="claude --model opus --effort max $PERMISSION_FLAG"
             if [ "$CLI_ADAPTER_LOADED" = true ]; then
                 _ashi_cli_type=$(get_cli_type "ashigaru${i}")
                 if [ "$_ashi_cli_type" = "claude" ]; then
-                    _ashi_cmd="claude --model opus --dangerously-skip-permissions"
+                    _ashi_cmd="claude --model opus --effort max $PERMISSION_FLAG"
                 else
                     _ashi_cmd=$(build_cli_command "ashigaru${i}")
                 fi
             fi
-            # Codex等の初期プロンプト付加（サジェストUI停止問題対策）
-            _startup_prompt=$(get_startup_prompt "ashigaru${i}" 2>/dev/null)
-            if [[ -n "$_startup_prompt" ]]; then
-                _ashi_cmd="$_ashi_cmd \"$_startup_prompt\""
-            fi
             tmux set-option -p -t "multiagent:agents.${p}" @agent_cli "$_ashi_cli_type"
             tmux send-keys -t "multiagent:agents.${p}" "$_ashi_cmd"
             tmux send-keys -t "multiagent:agents.${p}" Enter
+            opencode_startup_delay "$_ashi_cli_type"
         done
         log_info "  └─ 足軽1-${_ASHIGARU_COUNT}（決戦の陣）、召喚完了"
     else
@@ -732,19 +759,15 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
         for i in $(seq 1 "$_ASHIGARU_COUNT"); do
             p=$((PANE_BASE + i))
             _ashi_cli_type="claude"
-            _ashi_cmd="claude --model sonnet --dangerously-skip-permissions"
+            _ashi_cmd="claude --model sonnet --effort max $PERMISSION_FLAG"
             if [ "$CLI_ADAPTER_LOADED" = true ]; then
                 _ashi_cli_type=$(get_cli_type "ashigaru${i}")
                 _ashi_cmd=$(build_cli_command "ashigaru${i}")
             fi
-            # Codex等の初期プロンプト付加（サジェストUI停止問題対策）
-            _startup_prompt=$(get_startup_prompt "ashigaru${i}" 2>/dev/null)
-            if [[ -n "$_startup_prompt" ]]; then
-                _ashi_cmd="$_ashi_cmd \"$_startup_prompt\""
-            fi
             tmux set-option -p -t "multiagent:agents.${p}" @agent_cli "$_ashi_cli_type"
             tmux send-keys -t "multiagent:agents.${p}" "$_ashi_cmd"
             tmux send-keys -t "multiagent:agents.${p}" Enter
+            opencode_startup_delay "$_ashi_cli_type"
         done
         log_info "  └─ 足軽1-${_ASHIGARU_COUNT}（平時の陣）、召喚完了"
     fi
@@ -752,19 +775,15 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
     # 軍師（pane _ASHIGARU_COUNT+1）: Opus Thinking — 戦略立案・設計判断専任
     p=$((PANE_BASE + _ASHIGARU_COUNT + 1))
     _gunshi_cli_type="claude"
-    _gunshi_cmd="claude --model opus --dangerously-skip-permissions"
+    _gunshi_cmd="claude --model opus --effort max $PERMISSION_FLAG"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _gunshi_cli_type=$(get_cli_type "gunshi")
         _gunshi_cmd=$(build_cli_command "gunshi")
     fi
-    # Codex等の初期プロンプト付加（サジェストUI停止問題対策）
-    _startup_prompt=$(get_startup_prompt "gunshi" 2>/dev/null)
-    if [[ -n "$_startup_prompt" ]]; then
-        _gunshi_cmd="$_gunshi_cmd \"$_startup_prompt\""
-    fi
     tmux set-option -p -t "multiagent:agents.${p}" @agent_cli "$_gunshi_cli_type"
     tmux send-keys -t "multiagent:agents.${p}" "$_gunshi_cmd"
     tmux send-keys -t "multiagent:agents.${p}" Enter
+    opencode_startup_delay "$_gunshi_cli_type"
     _gunshi_display=$(get_model_display_name "gunshi" 2>/dev/null || echo "Opus+T")
     tmux set-option -p -t "multiagent:agents.${p}" @model_name "$_gunshi_display" 2>/dev/null || true
     log_info "  └─ 軍師（${_gunshi_display}）、召喚完了"
@@ -1047,12 +1066,12 @@ if [ "$SETUP_ONLY" = true ]; then
     echo "  ┌──────────────────────────────────────────────────────────┐"
     echo "  │  # 将軍を召喚                                            │"
     echo "  │  tmux send-keys -t shogun:main \\                         │"
-    echo "  │    'claude --dangerously-skip-permissions' Enter         │"
+    echo "  │    'claude ${PERMISSION_FLAG}' Enter         │"
     echo "  │                                                          │"
     echo "  │  # 家老・足軽を一斉召喚                                  │"
     echo "  │  for p in \$(seq $PANE_BASE $((PANE_BASE+8))); do                                 │"
     echo "  │      tmux send-keys -t multiagent:agents.\$p \\            │"
-    echo "  │      'claude --dangerously-skip-permissions' Enter       │"
+    echo "  │      'claude ${PERMISSION_FLAG}' Enter       │"
     echo "  │  done                                                    │"
     echo "  └──────────────────────────────────────────────────────────┘"
     echo ""

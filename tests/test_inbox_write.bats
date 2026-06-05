@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # test_inbox_write.bats — inbox_write.sh ユニットテスト
-# リグレッションテスト仕様書 T-001 ~ T-012 実装
+# リグレッションテスト仕様書 T-001 ~ T-013 実装
 #
 # テスト構成:
 #   T-001~T-002: 引数バリデーション
@@ -11,6 +11,7 @@
 #   T-010: flock競合時のリトライ
 #   T-011: 特殊文字のエスケープ処理
 #   T-012: inbox初期化（ディレクトリ自動作成）
+#   T-013~T-014: lock directory解放
 
 # --- セットアップ ---
 
@@ -72,6 +73,26 @@ teardown() {
     run bash "$TEST_INBOX_WRITE" "test_agent"
     [ "$status" -eq 1 ]
     [[ "$output" =~ "Usage" ]]
+}
+
+# =============================================================================
+# T-002b: 引数バリデーション — type/from未指定でexit 1
+# =============================================================================
+
+@test "T-002b: missing type and from → exit 1" {
+    run bash "$TEST_INBOX_WRITE" "test_agent" "content only"
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Usage" ]]
+}
+
+# =============================================================================
+# T-002c: 自己送信ガード — from==targetでexit 1
+# =============================================================================
+
+@test "T-002c: self-send (from==target) → exit 1 with REJECTED" {
+    run bash "$TEST_INBOX_WRITE" "karo" "self message" "cmd_new" "karo"
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "REJECTED" ]]
 }
 
 # =============================================================================
@@ -149,8 +170,8 @@ EOF
 
 @test "T-005: message ID uniqueness → 2 rapid writes produce different IDs" {
     # 2回連続書き込み
-    bash "$TEST_INBOX_WRITE" "test_agent" "メッセージA"
-    bash "$TEST_INBOX_WRITE" "test_agent" "メッセージB"
+    bash "$TEST_INBOX_WRITE" "test_agent" "メッセージA" "test_type" "sender_a"
+    bash "$TEST_INBOX_WRITE" "test_agent" "メッセージB" "test_type" "sender_b"
 
     # python3で検証
     "$VENV_PYTHON" <<EOF
@@ -174,24 +195,10 @@ EOF
 # T-006: デフォルト値 — type未指定でwake_up
 # =============================================================================
 
-@test "T-006: type/from default values → type=wake_up, from=unknown when not specified" {
+@test "T-006: missing type/from → exit 1 with Usage message" {
     run bash "$TEST_INBOX_WRITE" "test_agent" "デフォルトテスト"
-    [ "$status" -eq 0 ]
-
-    # python3で検証
-    "$VENV_PYTHON" <<EOF
-import yaml
-
-with open('$TEST_INBOX_DIR/test_agent.yaml') as f:
-    data = yaml.safe_load(f)
-
-msg = data['messages'][0]
-
-assert msg['type'] == 'wake_up', f'Expected type=wake_up, got {msg["type"]}'
-assert msg['from'] == 'unknown', f'Expected from=unknown, got {msg["from"]}'
-
-print('T-006: PASS')
-EOF
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Usage" ]]
 }
 
 # =============================================================================
@@ -245,7 +252,7 @@ with open('$TEST_INBOX_DIR/test_agent.yaml', 'w') as f:
 EOF
 
     # 新規メッセージ1件書き込み
-    run bash "$TEST_INBOX_WRITE" "test_agent" "新規メッセージ"
+    run bash "$TEST_INBOX_WRITE" "test_agent" "新規メッセージ" "test_type" "other_sender"
     [ "$status" -eq 0 ]
 
     # 検証: 合計50件以下、新規メッセージは存在
@@ -305,7 +312,7 @@ with open('$TEST_INBOX_DIR/test_agent.yaml', 'w') as f:
 EOF
 
     # 新規メッセージ1件書き込み（未読20→21件になる）
-    run bash "$TEST_INBOX_WRITE" "test_agent" "新規未読"
+    run bash "$TEST_INBOX_WRITE" "test_agent" "新規未読" "test_type" "other_sender"
     [ "$status" -eq 0 ]
 
     # 検証: 未読21件が全て保持される
@@ -380,7 +387,7 @@ EOF
 ブレース: {key: value}
 配列: [1, 2, 3]"
 
-    run bash "$TEST_INBOX_WRITE" "test_agent" "$SPECIAL_CONTENT"
+    run bash "$TEST_INBOX_WRITE" "test_agent" "$SPECIAL_CONTENT" "test_type" "other_sender"
     [ "$status" -eq 0 ]
 
     # 検証: 特殊文字が正しく保存・復元されること
@@ -416,7 +423,7 @@ EOF
     [ ! -d "$TEST_INBOX_DIR" ]
 
     # メッセージ書き込み
-    run bash "$TEST_INBOX_WRITE" "test_agent" "自動作成テスト"
+    run bash "$TEST_INBOX_WRITE" "test_agent" "自動作成テスト" "test_type" "other_sender"
     [ "$status" -eq 0 ]
 
     # ディレクトリとファイルが作成されていることを確認
@@ -434,4 +441,26 @@ assert len(data['messages']) == 1, 'Expected 1 message after auto-create'
 
 print('T-012: PASS')
 EOF
+}
+
+@test "T-013: lock directory is released after successful write" {
+    run bash "$TEST_INBOX_WRITE" "test_agent" "lock release" "test_type" "other_sender"
+    [ "$status" -eq 0 ]
+
+    [ ! -d "$TEST_INBOX_DIR/test_agent.yaml.lock.d" ]
+}
+
+@test "T-014: lock directory is released after python failure" {
+    rm -rf "$TEST_TMPDIR/.venv"
+    mkdir -p "$TEST_TMPDIR/.venv/bin"
+    cat > "$TEST_TMPDIR/.venv/bin/python3" <<'PYFAIL'
+#!/usr/bin/env bash
+exit 1
+PYFAIL
+    chmod +x "$TEST_TMPDIR/.venv/bin/python3"
+
+    run bash "$TEST_INBOX_WRITE" "test_agent" "lock failure" "test_type" "other_sender"
+    [ "$status" -ne 0 ]
+
+    [ ! -d "$TEST_INBOX_DIR/test_agent.yaml.lock.d" ]
 }

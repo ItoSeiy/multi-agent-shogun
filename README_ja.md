@@ -4,13 +4,13 @@
 
 **AIコーディング軍団統率システム — Multi-CLI対応**
 
-*コマンド1つで、10体のAIエージェントが並列稼働 — **Claude Code / OpenAI Codex / GitHub Copilot / Kimi Code** 混成軍*
+*コマンド1つで、10体のAIエージェントが並列稼働 — **Claude Code / OpenAI Codex / GitHub Copilot / Kimi Code / OpenCode** 混成軍*
 
 **Talk Coding — Vibe Codingではなく、スマホに話すだけでAIが実行**
 
 [![GitHub Stars](https://img.shields.io/github/stars/yohey-w/multi-agent-shogun?style=social)](https://github.com/yohey-w/multi-agent-shogun)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![v3.5 Dynamic Model Routing](https://img.shields.io/badge/v3.5-Dynamic_Model_Routing-ff6600?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHRleHQgeD0iMCIgeT0iMTIiIGZvbnQtc2l6ZT0iMTIiPuKalTwvdGV4dD48L3N2Zz4=)](https://github.com/yohey-w/multi-agent-shogun)
+[![v5.1.0 Karo Traffic Control](https://img.shields.io/badge/v5.1.0-Karo%20Traffic%20Control-ff6600?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHRleHQgeD0iMCIgeT0iMTIiIGZvbnQtc2l6ZT0iMTIiPuKalTwvdGV4dD48L3N2Zz4=)](https://github.com/yohey-w/multi-agent-shogun/releases/tag/v5.1.0)
 [![Shell](https://img.shields.io/badge/Shell%2FBash-100%25-green)]()
 
 [English](README.md) | [日本語](README_ja.md)
@@ -32,14 +32,18 @@
 
 ## クイックスタート
 
-**必要なもの:** tmux、bash 4+、以下のいずれか: [Claude Code](https://claude.ai/code) / Codex / Copilot / Kimi
+**必要なもの:** tmux、bash 4+、以下のいずれか: [Claude Code](https://claude.ai/code) / Codex / Copilot / Kimi / OpenCode
 
 ```bash
 git clone https://github.com/yohey-w/multi-agent-shogun
 cd multi-agent-shogun
-bash first_setup.sh          # 初回セットアップ: 設定・依存関係・MCP
-bash shutsujin_departure.sh  # 全エージェント起動
+bash first_setup.sh                        # 初回セットアップ: 設定・依存関係・MCP
+source ~/.bashrc                           # PATH反映
+claude --dangerously-skip-permissions      # 初回のみ: OAuth認証 + Bypass承認 → /exit で退出
+bash shutsujin_departure.sh                # 全エージェント起動
 ```
+
+> 詳しいインストール手順（Windows含む）と「最初の30分の歩き方」は下記 [🚀 クイックスタート](#-クイックスタート) と [📖 基本的な使い方](#-基本的な使い方) を参照。
 
 将軍ペインに命令を入力：
 
@@ -54,7 +58,7 @@ bash shutsujin_departure.sh  # 全エージェント起動
 
 ## これは何？
 
-**multi-agent-shogun** は、複数のAIコーディングCLIインスタンスを同時に実行し、戦国時代の軍制のように統率するシステムです。**Claude Code**、**OpenAI Codex**、**GitHub Copilot**、**Kimi Code** の4CLIに対応。
+**multi-agent-shogun** は、複数のAIコーディングCLIインスタンスを同時に実行し、戦国時代の軍制のように統率するシステムです。**Claude Code**、**OpenAI Codex**、**GitHub Copilot**、**Kimi Code**、**OpenCode** の5CLIに対応。
 
 **なぜ使うのか？**
 - 1つの命令で、7体のAIワーカー+1体の軍師が並列で実行
@@ -91,7 +95,7 @@ bash shutsujin_departure.sh  # 全エージェント起動
 | **アーキテクチャ** | 1プロセス内のサブエージェント | リード+チームメイト（JSONメールボックス） | グラフベースの状態機械 | ロールベースエージェント | tmux経由の階層構造 |
 | **並列性** | 逐次実行（1つずつ） | 複数の独立セッション | 並列ノード（v0.2+） | 限定的 | **8体の独立エージェント** |
 | **連携コスト** | TaskごとにAPIコール | 高い（各チームメイト=別コンテキスト） | API + インフラ（Postgres/Redis） | API + CrewAIプラットフォーム | **ゼロ**（YAML + tmux） |
-| **Multi-CLI** | Claude Codeのみ | Claude Codeのみ | 任意のLLM API | 任意のLLM API | **4 CLI**（Claude/Codex/Copilot/Kimi） |
+| **Multi-CLI** | Claude Codeのみ | Claude Codeのみ | 任意のLLM API | 任意のLLM API | **5 CLI**（Claude/Codex/Copilot/Kimi/OpenCode） |
 | **可観測性** | Claudeのログのみ | tmux分割ペインまたはインプロセス | LangSmith連携 | OpenTelemetry | **ライブtmuxペイン** + ダッシュボード |
 | **スキル発見** | なし | なし | なし | なし | **ボトムアップ自動提案** |
 | **セットアップ** | Claude Code内蔵 | 内蔵（実験的） | 重い（インフラ必要） | pip install | シェルスクリプト |
@@ -121,7 +125,7 @@ bash shutsujin_departure.sh  # 全エージェント起動
 
 ### Multi-CLI対応
 
-将軍システムは特定ベンダーに依存しない。4つのCLIツールに対応し、それぞれの強みを活かす：
+将軍システムは特定ベンダーに依存しない。5つのCLIツールに対応し、それぞれの強みを活かす：
 
 | CLI | 特徴 | デフォルトモデル |
 |-----|------|-----------------|
@@ -129,6 +133,9 @@ bash shutsujin_departure.sh  # 全エージェント起動
 | **OpenAI Codex** | サンドボックス実行、JSONL構造化出力、`codex exec` ヘッドレスモード | gpt-5.3-codex |
 | **GitHub Copilot** | GitHub MCP組込、4種の特化エージェント（Explore/Task/Plan/Code-review）、`/delegate` | Claude Sonnet 4.6 |
 | **Kimi Code** | 無料プランあり、多言語サポート | Kimi k2 |
+| **OpenCode** | `AGENTS.md` 自動読込、`--agent` による個体別エージェント定義、`/new` でのコンテキストリセット、モデル変更は再起動のみ、決定的な対話型 TUI 起動、`--model provider/model` ルーティング | provider/model |
+
+OpenCode の起動は `--agent` で生成済み `.opencode/agents/<agent_id>.md` を読み込み、リセットは `/new`、モデル変更は再起動で行う。ロール別の境界は生成されたエージェント frontmatter に埋め込まれており、将軍は監督のため `queue/reports/*` を読めるが書けず、家老は分配と報告集約のみ、足軽は自分の task/report のみ、軍師は足軽レポートを読み `gunshi_report.yaml` だけを書く。
 
 統一ビルドシステムが共有テンプレートからCLI固有の指示書を自動生成：
 
@@ -137,10 +144,12 @@ instructions/
 ├── common/              # 共通ルール（全CLI共通）
 ├── cli_specific/        # CLI固有のツール説明
 │   ├── claude_tools.md  # Claude Code ツール・機能
-│   └── copilot_tools.md # GitHub Copilot CLI ツール・機能
+│   ├── copilot_tools.md # GitHub Copilot CLI ツール・機能
+│   └── opencode_tools.md # OpenCode ツール・エージェントfrontmatter・権限モデル
 └── roles/               # ロール定義（将軍、家老、足軽）
     ↓ ビルド
-CLAUDE.md / AGENTS.md / copilot-instructions.md  ← CLI別に生成
+CLAUDE.md / AGENTS.md / .github/copilot-instructions.md / .opencode/agents/*.md
+  ← CLI別に生成
 ```
 
 ルールの変更は1箇所。全CLIに反映。同期ズレなし。
@@ -268,9 +277,79 @@ cd /mnt/c/tools/multi-agent-shogun
 ./shutsujin_departure.sh
 ```
 
-### 📱 スマホからアクセス（どこからでも指揮）
+### 📱 スマホからアクセス — 専用Androidアプリ（推奨）
 
-ベッドから、カフェから、トイレから。スマホでAI部下を操作できる。
+<p align="center">
+  <img src="android/screenshots/01_shogun_terminal.png" alt="将軍ターミナル" width="200">
+  <img src="android/screenshots/02_agents_grid.png" alt="エージェント一覧" width="200">
+  <img src="android/screenshots/03_dashboard.png" alt="ダッシュボード" width="200">
+</p>
+
+専用のAndroidアプリで10体のAIエージェントをスマホから監視・指揮できる。
+
+| 機能 | 説明 |
+|------|------|
+| **将軍ターミナル** | SSHターミナル + 音声入力 + 特殊キーバー (C-c, C-b, Tab等) |
+| **エージェント一覧** | 9ペイン同時監視。タップで全画面展開 + コマンド送信 |
+| **ダッシュボード** | dashboard.md をレンダリング表示。表のテキストもコピー可 |
+| **レートリミット** | エージェントタブ右下のボタンからClaude Max 5h/7d消費率をプログレスバーで確認 |
+| **音声入力** | Google Speech APIによる日本語連続認識。キーボード音声入力より高精度 |
+| **スクショ共有** | 共有メニューから画像をSFTP転送 |
+
+> **Note:** 現在Androidのみ対応。iOS版は開発者にテスト端末がないため未対応。ニーズがあれば [Issue](https://github.com/yohey-w/multi-agent-shogun/issues) で教えてください。PRも歓迎！
+
+#### セットアップ手順
+
+**前提条件：**
+- WSL2 (またはLinuxサーバー) で将軍システムが稼働中
+- SSHサーバーが起動済み (`sudo service ssh start`)
+- スマホとサーバーが同一ネットワーク上（LAN or [Tailscale](https://tailscale.com/)）
+
+**手順：**
+
+1. **APKをインストール**
+   1. [`android/release/multi-agent-shogun.apk`](android/release/multi-agent-shogun.apk) をスマホにダウンロード（GitHub上のファイルを開いて「Download raw file」）
+   2. ダウンロード完了の通知をタップ → 「インストール」
+   3. 「提供元不明のアプリ」警告が出たら → 「設定」→ 該当ブラウザの「この提供元を許可」をON → 戻って「インストール」
+   4. インストール完了 → 「開く」
+
+2. **SSH接続情報を設定**（設定タブ）
+
+   | 項目 | 入力例 | 説明 |
+   |------|--------|------|
+   | SSHホスト | `100.xxx.xxx.xxx` | サーバーのIP（Tailscale IPなど） |
+   | SSHポート | `22` | 通常は22 |
+   | SSHユーザー | `your_username` | SSH接続のユーザー名 |
+   | SSH秘密鍵パス | `/data/data/.../id_ed25519` | スマホ上の秘密鍵パス（※1） |
+   | SSHパスワード | `****` | 鍵がない場合はパスワード認証 |
+   | プロジェクトパス | `/mnt/c/tools/multi-agent-shogun` | サーバー側のプロジェクトディレクトリ |
+   | 将軍セッション名 | `shogun` | tmuxの将軍セッション名 |
+   | エージェントセッション名 | `multiagent` | tmuxのエージェントセッション名 |
+
+   ※1 秘密鍵はスマホに転送するか、パスワード認証を使用
+
+3. **保存 → 将軍タブに切り替え** → 自動接続
+
+**Tailscaleを使う場合（外出先からも接続可能）：**
+
+```bash
+# サーバー側（WSL2）
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscaled &
+sudo tailscale up --authkey tskey-auth-XXXXXXXXXXXX
+sudo service ssh start
+```
+
+スマホにもTailscaleアプリをインストールして同じアカウントでログイン。表示されるTailscale IPをアプリのSSHホストに入力。
+
+**ntfy通知も併用する場合：**
+
+[ntfyの設定セクション](#-8-スマホ通知ntfy)を参照。家老からの進捗通知をプッシュで受け取れる。
+
+<details>
+<summary>📟 <b>Termux方式（Androidアプリなし）</b>（クリックで展開）</summary>
+
+Termuxを使ったSSH接続でも操作できる。専用アプリと比べて機能は限定的だが、追加のAPKインストールが不要。
 
 **必要なもの（全部無料）：**
 
@@ -304,9 +383,11 @@ cd /mnt/c/tools/multi-agent-shogun
 
 **切り方：** Termuxのウィンドウをスワイプで閉じるだけ。tmuxセッションは生き残る。AI部下は黙々と作業を続けている。
 
-**音声入力：** スマホの音声入力で喋れば、将軍が自然言語を理解して全軍に指示を出す。音声認識の誤字も文脈で解釈してくれる。
+</details>
 
-**もっと簡単に：** ntfyを設定すると、ntfyアプリから直接通知の受信やコマンドの送信ができます。SSHは不要です。
+**音声入力：** Androidアプリの音声入力ボタンで喋れば、将軍が自然言語を理解して全軍に指示を出す。
+
+**もっと簡単に：** ntfyを設定すると、プッシュ通知で進捗を受け取れます。
 
 ---
 
@@ -370,7 +451,7 @@ wsl --install
 |-----------|------|---------------|
 | `install.bat` | Windows: WSL2 + Ubuntu のセットアップ | 初回のみ |
 | `first_setup.sh` | tmux、Node.js、Claude Code CLI のインストール + Memory MCP設定 | 初回のみ |
-| `shutsujin_departure.sh` | tmuxセッション作成 + CLI起動 + 指示書読み込み + ntfyリスナー起動 | 毎日 |
+| `shutsujin_departure.sh` | tmuxセッション作成 + エージェントごとの設定済みCLI起動 + 指示書読み込み + ntfyリスナー起動 | 毎日 |
 | `scripts/switch_cli.sh` | エージェントのCLI/モデルをライブ切替（settings.yaml → /exit → 再起動） | 必要時 |
 
 ### `install.bat` が自動で行うこと：
@@ -380,8 +461,8 @@ wsl --install
 
 ### `shutsujin_departure.sh` が行うこと：
 - ✅ tmuxセッションを作成（shogun + multiagent）
-- ✅ 全エージェントでClaude Codeを起動
-- ✅ 各エージェントに指示書を自動読み込み
+- ✅ `config/settings.yaml` の指定に従って各エージェントを起動（Claude/Codex/Copilot/Kimi/OpenCode）
+- ✅ CLIごとの指示書または生成済みエージェント定義を自動読み込み
 - ✅ キューファイルをリセットして新しい状態に
 - ✅ ntfyリスナーを起動してスマホ通知を有効化（設定済みの場合）
 
@@ -403,6 +484,10 @@ wsl --install
 | tmux | `sudo apt install tmux` | ターミナルマルチプレクサ |
 | Node.js v20+ | `nvm install 20` | MCPサーバーに必要 |
 | Claude Code CLI | `curl -fsSL https://claude.ai/install.sh \| bash` | Anthropic公式CLI（ネイティブ版を推奨。npm版は非推奨） |
+| OpenAI Codex CLI | OpenAI Codex公式配布からインストール | `type: codex` のエージェントでのみ必要 |
+| GitHub Copilot CLI | GitHub Copilot CLIをインストールして認証 | `type: copilot` のエージェントでのみ必要 |
+| Kimi Code CLI | Kimi Codeをインストールして認証 | `type: kimi` のエージェントでのみ必要 |
+| OpenCode CLI | `npm install -g opencode-ai` | `type: opencode` のエージェントでのみ必要。provider API key は起動シェルで読める必要あり |
 
 </details>
 
@@ -464,6 +549,108 @@ JavaScriptフレームワーク上位5つを調査して比較表を作成せよ
 | 足軽 2 | Vue調査 | 実行中 |
 | 足軽 3 | Angular調査 | 完了 |
 ```
+
+### 案件単位での運用（Visual Studio の「ソリューション」相当）
+
+shogun システムは一度セットアップすれば、複数の案件（プロジェクト）を**同じ将軍配下**で切り替えながら扱えます。Visual Studio で言う「ソリューション」に相当する単位は `projects/{name}.yaml` + `context/{name}.md` です。
+
+#### 1. 最小の1案件を動かす流れ
+
+```bash
+# (1) 将軍に接続（shutsujin_departure.sh 完了済みの状態から）
+tmux attach-session -t shogun
+
+# (2) 将軍に案件を指示するだけで自動的に案件が立ち上がる
+#     → 将軍が cmd を queue/shogun_to_karo.yaml に書き、家老に通知
+#     → 家老が足軽に割り振り、並列実行
+#     → 結果は dashboard.md に集約
+```
+
+明示的な「案件を作る」コマンドは不要です。将軍が必要に応じて cmd の `project:` フィールドに案件IDを付け、関連ファイルは自動的に分離されます。
+
+#### 2. 案件を明示登録する場合（任意・長期案件向け）
+
+長期的に同じ案件を回す場合、メタ情報を `projects/{name}.yaml` に置けます:
+
+```yaml
+# projects/example.yaml
+id: example
+name: "サンプル案件"
+working_directory: /path/to/repo
+north_star: "この案件で達成したい最終目標"
+notes: |
+  案件固有のメモ、関係者、特殊ルール
+```
+
+将軍/家老はこのファイルを参照し、cmd 発令時に案件コンテキストを組み込みます。
+
+詳細な案件知識（要件、設計、過去のFB）は `context/{name}.md` に書きます。将軍が案件に関する cmd を発令する際、自動的にこのファイルを参照します。
+
+#### 3. エージェント構成のカスタマイズ
+
+陣営構成（誰にどのCLIを使わせるか）は `config/settings.yaml`：
+
+```yaml
+cli:
+  agents:
+    ashigaru1:
+      type: codex          # codex / claude / copilot / kimi / opencode
+      model: gpt-5.5
+    ashigaru2:
+      type: claude
+      model: claude-sonnet-4-6
+    # ashigaru3-7, gunshi, karo も同様
+```
+
+OpenCode は provider付きモデルIDを使います：
+
+```yaml
+cli:
+  agents:
+    ashigaru3:
+      type: opencode
+      model: openrouter/openai/gpt-4o-mini
+      variant: high  # 任意: provider固有のreasoning variant
+```
+
+OpenRouter 設定は2つに分かれます：
+
+1. **モデルルーティング** は上記の通り `config/settings.yaml` に書きます（`type: opencode`、`model: openrouter/...`）。
+2. **provider認証** は `settings.yaml` ではなく OpenCode 側で設定します。将軍を起動するのと同じOSユーザーで一度 OpenCode を起動し、`/connect` → `OpenRouter` からAPIキーを登録してください。OpenCodeはprovider認証情報をそのOSユーザーのOpenCodeユーザーデータ配下（例: `~/.local/share/opencode/`。具体的なファイル/DBはOpenCode内部実装）に保存します。ヘッドレス運用などで環境変数方式を使う場合は、`shutsujin_departure.sh` を実行するシェルに `OPENROUTER_API_KEY` を読み込ませてください。
+
+APIキーを `config/settings.yaml`、`config/opencode-tui.json`、`.opencode/agents/*.md` に書かないでください。これらはルーティング、tmux向けキー設定、生成済みロール定義の置き場です。
+
+OpenCode 選択時は `lib/cli_adapter.sh` が `--agent <agent_id>` と、リポジトリ固定の `OPENCODE_TUI_CONFIG=config/opencode-tui.json` を付けて起動します。OpenCode TUI 起動コマンドは `--variant` を受け付けないため、対象agentに `variant:` があれば `scripts/build_instructions.sh` と `scripts/switch_cli.sh` が `model:` / `variant:` を git-ignored の `.opencode/agents/<agent_id>-runtime.md` に同期し、OpenCode が `--agent <agent_id>-runtime` 経由で読み込みます。
+
+途中で切り替えたい場合は `scripts/switch_cli.sh` を使います：
+
+```bash
+bash scripts/switch_cli.sh ashigaru3 --type claude --model claude-sonnet-4-6
+bash scripts/switch_cli.sh ashigaru3 --type opencode --model openrouter/openai/gpt-4o-mini
+bash scripts/switch_cli.sh ashigaru3 --type opencode --model openrouter/minimax/minimax-m2.5 --variant xhigh
+```
+
+#### 4. 案件の切り替え／クローズ
+
+「案件をクローズする」明示コマンドはありません。**将軍が次の案件の cmd を発令すれば、自動的にコンテキストは切り替わります**。
+
+- 一時的に脇に置く: 何もしなくてよい。`queue/` の旧 cmd は履歴として残り、将軍が再開時に状態を復元
+- 完全に終了: `projects/{name}.yaml` を削除、または `archived: true` フラグを追加
+- 並行運用: 複数の案件を同時に走らせる場合、cmd の `project:` フィールドで区別
+
+#### 5. 経験値・設定の引き継ぎ
+
+次回以降の案件で活きるのは:
+
+| 引き継がれるもの | 保存先 | 参照タイミング |
+|------------------|--------|----------------|
+| 殿の好み・教訓 | Memory MCP（永続） | 全エージェントの Session Start 時 |
+| プロジェクト固有知識 | `context/{name}.md` | 該当案件の cmd 実行時 |
+| 過去の cmd 履歴 | `queue/shogun_to_karo.yaml` | 将軍が必要時に参照 |
+| カスタムスキル | `~/.claude/skills/`, `skills/` | 関連 trigger 発火時 |
+| エージェント構成 | `config/settings.yaml` | shutsujin 起動時 |
+
+特に **Memory MCP** が「経験値」の中心。殿が「次から〇〇しないで」「△△を覚えとけ」と言えば、将軍が自動的に Memory MCP に記録し、新しい案件でも継続して参照します。
 
 ### 詳細なフロー
 
@@ -566,15 +753,35 @@ Step 3: エージェントが自分のinboxを読む
 | 優先順位 | 方式 | 何が起きるか | いつ使われるか |
 |----------|------|-------------|---------------|
 | 1番 | **自己監視** | エージェントが自分のinboxファイルを監視 — 自力で起床、nudge不要 | エージェント自身が `inotifywait` を実行中 |
-| 2番 | **tmux send-keys** | `tmux send-keys` で短いnudgeを送信（テキストとEnterを分離送信、Codex CLI対応） | 自己監視が反応しない場合のフォールバック |
+| 2番 | **Stop Hook** | Claude Codeエージェントがターン終了時にinboxをチェック（`.claude/settings.json` Stop hook経由） | Claude Codeエージェントのみ |
+| 3番 | **tmux send-keys** | `tmux send-keys` で短いnudgeを送信（テキストとEnterを分離送信、Codex CLI対応） | フォールバック — ASW Phase 2以上では無効 |
 
-**3段階エスカレーション（v3.2）** — エージェントがnudgeに反応しない場合:
+**Agent Self-Watch (ASW) フェーズ** — `tmux send-keys` nudgeの使用をどこまで抑制するかを制御:
+
+| ASWフェーズ | nudge動作 | 配信方式 | 推奨場面 |
+|------------|----------|---------|---------|
+| **Phase 1** | 通常nudge有効 | self-watch + send-keys | 初期セットアップ、混在CLI環境 |
+| **Phase 2** | **busy→抑止、idle→nudge** | busy: stop hookがターン終了時に配信。idle: nudge（不可避） | Claude Codeエージェント＋stop hook環境（推奨） |
+| **Phase 3** | `FINAL_ESCALATION_ONLY` | 最終リカバリ時のみsend-keys | 完全に安定した環境 |
+
+Phase 2はidleフラグファイル（`/tmp/shogun_idle_{agent}`）でbusy/idle状態を判定する。Stop hookがターン境界でフラグを作成/削除する。作業中のnudge割り込みを排除しつつ、idle時の起床は維持する。
+
+> **なぜnudge完全撲滅できないのか？** Claude CodeのStop hookはターン終了時にしか発火しない。idleのエージェント（プロンプトで待機中）はターンが終了しないため、inboxチェックを発火させるhookがない。将来 `Notification` hookの `idle_prompt` タイプがブロック対応になるか、定期タイマーhookが追加されれば解決可能。
+
+`config/settings.yaml` で設定:
+```yaml
+asw_phase: 2   # Claude Code環境では推奨
+```
+
+または `scripts/inbox_watcher.sh` の `ASW_PHASE` 変数を直接変更。変更後はinbox_watcherプロセスの再起動が必要。
+
+**3段階エスカレーション（v3.2）** — エージェントが応答しない場合:
 
 | フェーズ | タイミング | アクション |
 |---------|----------|-----------|
-| Phase 1 | 0-2分 | 標準nudge（`inbox3` テキスト + Enter） |
-| Phase 2 | 2-4分 | Escape×2 + C-c でカーソルリセット、その後nudge |
-| Phase 3 | 4分以上 | `/clear` 送信でセッション強制リセット（5分間に最大1回） |
+| Phase 1 | 0-2分 | 標準nudge（`inbox3` テキスト + Enter） — *ASW Phase 2以上ではbusyエージェントはスキップ* |
+| Phase 2 | 2-4分 | Copilot/Kimi: Escape×2 + 1回の Ctrl-C + nudge。Claude/Codex/OpenCode: 通常nudgeへフォールバック |
+| Phase 3 | 4分以上 | CLI別のコンテキストリセットを送信。Claude/Copilot/Kimi は `/clear`、Codex/OpenCode は `/new`（5分間に最大1回） |
 
 **設計のポイント:**
 - **メッセージ内容はtmuxを経由しない** — 送るのは短い「メールが届いたよ」の通知だけ。中身はエージェントが自分でファイルを読む。これにより文字化けや配信ハングを根絶。
@@ -612,7 +819,7 @@ multiagent:agents.1            BUSY       ashigaru1
 multiagent:agents.8            BUSY       gunshi
 ```
 
-判定は **Claude Code** と **Codex CLI** の両方に対応。各tmuxペインの末尾5行からCLI固有のプロンプト/スピナーパターンを検出。判定ロジックは `lib/agent_status.sh` に分離されており、自作スクリプトからも利用可能：
+判定は **Claude Code**・**Codex CLI**・**OpenCode** に対応。各tmuxペインの末尾付近からCLI固有のプロンプト/スピナーパターンを検出。判定ロジックは `lib/agent_status.sh` に分離されており、自作スクリプトからも利用可能：
 
 ```bash
 source lib/agent_status.sh
@@ -1343,7 +1550,7 @@ dashboard_push:
 │      │                                                              │
 │      ├──▶ キューファイルとダッシュボードをリセット                     │
 │      │                                                              │
-│      └──▶ 全エージェントでClaude Codeを起動                          │
+│      └──▶ 各エージェントの設定済みCLIを起動                          │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -1354,10 +1561,10 @@ dashboard_push:
 <summary><b>shutsujin_departure.sh オプション</b>（クリックで展開）</summary>
 
 ```bash
-# デフォルト: フル起動（tmuxセッション + Claude Code起動）
+# デフォルト: フル起動（tmuxセッション + 設定済みCLI起動）
 ./shutsujin_departure.sh
 
-# セッションセットアップのみ（Claude Code起動なし）
+# セッションセットアップのみ（CLI起動なし）
 ./shutsujin_departure.sh -s
 ./shutsujin_departure.sh --setup-only
 
@@ -1458,8 +1665,8 @@ multi-agent-shogun/
 │       └── copilot_tools.md  # GitHub Copilot CLI ツール・機能
 │
 ├── lib/
-│   ├── agent_status.sh       # 共有 稼働/待機 判定（Claude Code + Codex）
-│   ├── cli_adapter.sh        # Multi-CLIアダプタ（Claude/Codex/Copilot/Kimi）
+│   ├── agent_status.sh       # 共有 稼働/待機 判定（Claude Code + Codex + OpenCode）
+│   ├── cli_adapter.sh        # Multi-CLIアダプタ（Claude/Codex/Copilot/Kimi/OpenCode）
 │   └── ntfy_auth.sh          # ntfy認証ヘルパー
 │
 ├── scripts/                  # ユーティリティスクリプト
@@ -1599,7 +1806,7 @@ mcp__memory__read_graph()  ← 動作！
 <details>
 <summary><b>エージェントが権限を求めてくる？</b></summary>
 
-`--dangerously-skip-permissions` 付きで起動していることを確認：
+CLIごとの無人実行向け権限設定で起動していることを確認。これは `shutsujin_departure.sh` が自動処理する。
 
 ```bash
 claude --dangerously-skip-permissions --system-prompt "..."
@@ -1667,14 +1874,36 @@ tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permi
 
 ---
 
-## v3.5の新機能 — Dynamic Model Routing
+## v5.1.0の新機能 — 家老を交通整理へ
 
-> **タスクに最適なモデルへ — エージェント再起動なしで。** Sonnet 4.6がOpusとの差を1.2pp（SWE-bench 79.6% vs 80.8%）まで縮め、タスク単位のモデルルーティングがはじめて費用対効果の合う選択に。
+> **管理職を作業列に入れない。** 家老の役割境界を明確化し、ワークフロー進行・委譲・最終受付に集中させます。レビュー/RCAは軍師、実行は足軽へ戻し、家老がボトルネックになる事故を防ぎます。
 
-- **Bloom Dynamic Model Routing** — `capability_tiers` でモデルごとにBloom上限を定義。L1-L3→Spark（1000+ tok/s）、L4→Sonnet 4.6、L5→Sonnet 4.6 + extended thinking、L6→Opus（本当に新規な設計のみ）。エージェント再起動不要で切り替わる
+- **家老は交通整理** — cmd受付、分解、依存管理、dashboard/daily log更新、最終受入判定に集中し、実作業を抱え込まない
+- **レビュー系は軍師** — QC、証跡レビュー、RCA、採用/破棄判断、設計レビュー、deploy blocker分類を軍師の責務として明文化
+- **実行系は足軽** — 実装、shell実行、deploy手順、テストコマンド実行は原則として足軽へ委譲
+- **E2E責任を再定義** — 家老はE2E計画レビュー、前提確認、最終pass/fail判定を担い、直接実行は理由明記が必要な例外扱い
+- **生成済みinstructionを更新** — Claude / Codex / Copilot / Kimi / OpenCode向けinstructionを新しい役割定義から再生成
+- **Androidローカル生成物をignore** — `android/` 配下の `.android-user/`、`.gradle-user/`、`.toolchain/` をgit管理対象外に追加
+
+## v5.0.0の新機能 — OpenCodeファーストクラス対応
+
+> **将軍システムをOpenCodeでも動かす。** OpenCodeがClaude Code、Codex、Copilot、Kimiと並ぶファーストクラスCLIになりました。個体別エージェント生成、tmux向け安定起動、provider付きモデルルーティング、VPS実機E2E検証まで対応しています。
+
+- **OpenCodeエージェント生成** — `scripts/build_instructions.sh` が、他CLIと同じ共通指示ソースから `.opencode/agents/*.md` を将軍/家老/足軽1-7/軍師向けに生成
+- **ロール境界つき権限** — `config/opencode-permissions.yaml` からOpenCode frontmatter権限を生成し、各ロールが所有ファイルだけを読み書きするよう制御
+- **tmuxで安定するOpenCode起動** — `lib/cli_adapter.sh` が `--agent <agent_id>` と `OPENCODE_TUI_CONFIG=config/opencode-tui.json` を付けて起動し、キー割当を固定
+- **provider付きモデル指定** — `settings.yaml` で `opencode/qwen3.6-plus-free` や `openrouter/openai/gpt-4o-mini` のようなOpenCodeモデルへルーティング可能
+- **CI/VPSで検証済み** — Multi-CLI CIがUbuntu/macOSでPASSし、VPS実機でOpenCodeによる Shogun → Karo → `dashboard.md` 実行を確認
+
+<details>
+<summary><b>v3.5の機能 — Dynamic Model Routing</b></summary>
+
+- **Bloom Dynamic Model Routing** — `capability_tiers` でモデルごとにBloom上限を定義。L1-L3→Spark、L4→Sonnet 4.6、L5→Sonnet 4.6 + extended thinking、L6→Opus。エージェント再起動不要で切り替わる
 - **Sonnet 4.6が新標準** — SWE-bench 79.6%、Opus 4.6との差わずか1.2pp。軍師をOpus→Sonnet 4.6に降格。全足軽のデフォルトもSonnet 4.6に。YAML1行を変えるだけ、再起動不要
 - **`/shogun-model-list` スキル** — 全CLIツール × モデル × サブスクリプション × Bloom上限の参照テーブル。Sonnet 4.6とSparkの位置づけを更新
 - **`/shogun-bloom-config` スキル** — 対話式設定: 2つの質問に答えるだけで最適な `capability_tiers` YAMLを生成
+
+</details>
 
 <details>
 <summary><b>v3.4の機能 — Bloom→エージェントルーティング、E2Eテスト、Stop Hook</b></summary>
@@ -1684,8 +1913,8 @@ tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permi
 - **E2Eテストスイート（19テスト、7シナリオ）** — モックCLIフレームワークが分離されたtmuxセッションでエージェント動作をシミュレート
 - **Stop hook inbox配信** — Claude Codeエージェントが `.claude/settings.json` のStop hookでターン終了時に自動的にinboxを確認。`send-keys` 割り込み問題を根絶
 - **モデルデフォルト更新** — 家老: Opus→Sonnet。軍師: Opus（深い推論）。全足軽: Sonnet（統一）
-- **Codex CLIスタートアッププロンプト** — `cli_adapter.sh` の `get_startup_prompt()` が初期 `[PROMPT]` 引数をCodex CLIに渡す
-- **YAMLスリム化ユーティリティ** — `scripts/slim_yaml.sh` が既読メッセージ・完了コマンドをアーカイブ
+- **Codex/OpenCode 起動統合** — Codex は `get_startup_prompt()` / `get_startup_prompt_arg()` で Session Start 復旧を行い、OpenCode は生成済み `.opencode/agents/*.md` を `--agent` で読み込む
+- **YAMLスリム化ユーティリティ** — `scripts/slim_yaml.sh` が既読メッセージ・終端コマンドをアーカイブ。現行 top-level/旧 `task.status` の両形式に対応し、`--dry-run` は queue 清掃監査でファイルを書き換えない
 
 </details>
 
@@ -1723,6 +1952,22 @@ tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permi
 
 ---
 
+## スポンサー
+
+このプロジェクトはスポンサーによって支えられています。
+
+<a href="https://github.com/sponsors/yohey-w">
+  <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?style=for-the-badge&logo=github-sponsors" alt="Sponsor">
+</a>
+
+| Tier | 特典 |
+|------|------|
+| ☕ $5/月 | スポンサーセクションに名前掲載 |
+| 🏯 $25/月 | 新リリースへの早期アクセス |
+| ⚔️ $100/月 | Issue/PRの優先対応（48h以内） |
+| 🎖️ $500/月 | 月1回の1on1コンサルテーション |
+| 🏛️ $1,000/月 | READMEにロゴ掲載 + 四半期戦略コンサル |
+
 ## コントリビューション
 
 Issue、Pull Requestを歓迎します。
@@ -1748,5 +1993,7 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照。
 **コマンド1つ。エージェント8体。連携コストゼロ。**
 
 ⭐ 役に立ったらスターをお願いします — 他の人にも見つけてもらえます。
+
+💖 [このプロジェクトをスポンサーする](https://github.com/sponsors/yohey-w)
 
 </div>

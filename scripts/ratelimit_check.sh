@@ -81,15 +81,116 @@ done
 # ═══════════════════════════════════════════════════════
 # Phase 2: Group agents by CLI type
 # ═══════════════════════════════════════════════════════
-declare -a CLAUDE_AGENTS=() CODEX_AGENTS=() OTHER_AGENTS=()
+declare -a CLAUDE_AGENTS=() CODEX_AGENTS=() OPENCODE_AGENTS=() OTHER_AGENTS=()
 
 for agent in "${ALL_AGENTS[@]}"; do
     case "${AGENT_CLI[$agent]}" in
         claude) CLAUDE_AGENTS+=("$agent") ;;
         codex)  CODEX_AGENTS+=("$agent") ;;
+        opencode) OPENCODE_AGENTS+=("$agent") ;;
         *)      OTHER_AGENTS+=("$agent") ;;
     esac
 done
+
+capture_tmux_pane_zoomed() {
+    local pane="$1"
+    local start="${2:--80}"
+    local restore_zoom=false
+    local was_zoomed="0"
+    local out=""
+
+    was_zoomed=$(timeout 2 tmux display-message -t "$pane" -p '#{window_zoomed_flag}' 2>/dev/null || echo "0")
+    if [[ "$was_zoomed" != "1" ]]; then
+        tmux resize-pane -t "$pane" -Z 2>/dev/null || true
+        restore_zoom=true
+        sleep 0.2
+    fi
+
+    out=$(tmux capture-pane -t "$pane" -p -J -S "$start" 2>/dev/null || echo "")
+
+    if $restore_zoom; then
+        tmux resize-pane -t "$pane" -Z 2>/dev/null || true
+    fi
+
+    printf '%s' "$out"
+}
+
+capture_codex_status_snapshot() {
+    local pane="$1"
+    local restore_zoom=false
+    local was_zoomed="0"
+    local out=""
+
+    was_zoomed=$(timeout 2 tmux display-message -t "$pane" -p '#{window_zoomed_flag}' 2>/dev/null || echo "0")
+    if [[ "$was_zoomed" != "1" ]]; then
+        tmux resize-pane -t "$pane" -Z 2>/dev/null || true
+        restore_zoom=true
+        sleep 0.2
+    fi
+
+    tmux send-keys -t "$pane" '/status' 2>/dev/null || true
+    sleep 0.3
+    tmux send-keys -t "$pane" Enter 2>/dev/null || true
+    sleep 2
+
+    out=$(tmux capture-pane -t "$pane" -p -J -S -80 2>/dev/null || echo "")
+
+    if $restore_zoom; then
+        tmux resize-pane -t "$pane" -Z 2>/dev/null || true
+    fi
+
+    printf '%s' "$out"
+}
+
+extract_latest_codex_status_block() {
+    awk '
+        />_ OpenAI Codex/ {
+            capture = 1
+            block = ""
+        }
+        capture {
+            block = block $0 ORS
+        }
+        capture && /^╰/ {
+            last = block
+            capture = 0
+        }
+        END {
+            printf "%s", last
+        }
+    ' <<< "$1"
+}
+
+extract_codex_context_left() {
+    awk '
+        /context left/ && match($0, /([0-9]+)%/, m) {
+            context = m[1]
+        }
+        /Context window:/ && match($0, /([0-9]+)% left/, m) {
+            fallback = m[1]
+        }
+        /[0-9]+% left/ && /·/ && match($0, /([0-9]+)% left/, m) {
+            context = m[1]
+        }
+        END {
+            if (context != "") {
+                print context
+            } else if (fallback != "") {
+                print fallback
+            }
+        }
+    ' <<< "$1"
+}
+
+normalize_reset_value() {
+    local reset_value="${1:-}"
+
+    if [[ -n "${reset_value//[[:space:]]/}" ]]; then
+        printf '%s' "$reset_value"
+    else
+        printf 'unknown'
+    fi
+}
 
 # ═══════════════════════════════════════════════════════
 # Phase 3: Collect data per CLI group
@@ -229,21 +330,88 @@ print(f'MESSAGES={messages}')
     fi
 fi
 
-# --- 3b: Codex context from panes ---
+# --- 3b: Codex /status from pane (zoom temporarily to avoid narrow tiled-pane truncation) ---
 declare -A CODEX_CONTEXT
 CODEX_WARNINGS=""
 CODEX_STATUS="OK"
 
+# Shared quota (same ChatGPT Pro account — capture from first idle agent with /status)
+CODEX_ACCT_5H_LEFT=""
+CODEX_ACCT_5H_RESET=""
+CODEX_ACCT_7D_LEFT=""
+CODEX_ACCT_7D_RESET=""
+CODEX_MODEL_5H_LEFT=""
+CODEX_MODEL_5H_RESET=""
+CODEX_MODEL_7D_LEFT=""
+CODEX_MODEL_7D_RESET=""
+CODEX_MODEL_LABEL=""
+
 if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
+    _rl_quota_done=false
+
     for agent in "${CODEX_AGENTS[@]}"; do
         pane="${AGENT_PANE[$agent]}"
-        ctx=$(tmux capture-pane -t "$pane" -p 2>/dev/null \
-            | grep -oE '[0-9]+% context left' | tail -1 \
-            | grep -oE '[0-9]+' || echo "?")
+        _pane_snapshot=$(capture_tmux_pane_zoomed "$pane" -80)
+
+        # Context: use a zoomed capture so the Codex prompt or recent /status block survives narrow panes.
+        ctx=$(extract_codex_context_left "$_pane_snapshot" || true)
         [[ -z "$ctx" ]] && ctx="?"
         CODEX_CONTEXT["$agent"]="$ctx"
 
-        # Check thresholds
+        # Quota: capture the latest /status block from a zoomed pane so narrow tiled panes do not
+        # truncate "% left" and reset timestamps.
+        if ! $_rl_quota_done; then
+            _status_out="$_pane_snapshot"
+            _status_block=$(extract_latest_codex_status_block "$_status_out")
+
+            if [[ ! "$_status_block" =~ [0-9]+%[[:space:]]left ]]; then
+                _status_out=$(capture_codex_status_snapshot "$pane")
+                _status_block=$(extract_latest_codex_status_block "$_status_out")
+            fi
+
+            if [[ -n "$_status_block" ]]; then
+                # Extract all "5h limit:" and "Weekly limit:" lines from the newest /status block only.
+                # First occurrence = account-level, second = model-level.
+                _5h_lines=$(printf '%s\n' "$_status_block" | grep '5h limit:' || true)
+                _wk_lines=$(printf '%s\n' "$_status_block" | grep 'Weekly limit:' || true)
+
+                # Account 5h (first line)
+                _line=$(printf '%s\n' "$_5h_lines" | head -1 || true)
+                if [[ -n "$_line" ]]; then
+                    CODEX_ACCT_5H_LEFT=$(printf '%s\n' "$_line" | grep -oE '[0-9]+% left' | head -1 | grep -oE '[0-9]+' || true)
+                    CODEX_ACCT_5H_RESET=$(printf '%s\n' "$_line" | sed -n 's/.*(resets \([^)]*\)).*/\1/p' | head -1)
+                fi
+
+                # Account Weekly (first line)
+                _line=$(printf '%s\n' "$_wk_lines" | head -1 || true)
+                if [[ -n "$_line" ]]; then
+                    CODEX_ACCT_7D_LEFT=$(printf '%s\n' "$_line" | grep -oE '[0-9]+% left' | head -1 | grep -oE '[0-9]+' || true)
+                    CODEX_ACCT_7D_RESET=$(printf '%s\n' "$_line" | sed -n 's/.*(resets \([^)]*\)).*/\1/p' | head -1)
+                fi
+
+                # Model label (e.g., "GPT-5.3-Codex-Spark")
+                CODEX_MODEL_LABEL=$(printf '%s\n' "$_status_block" | grep -oE 'GPT-[^:]+ limit:' | head -1 | sed 's/ limit:$//' || true)
+
+                # Model 5h (second line)
+                _line=$(printf '%s\n' "$_5h_lines" | sed -n '2p' || true)
+                if [[ -n "$_line" ]]; then
+                    CODEX_MODEL_5H_LEFT=$(printf '%s\n' "$_line" | grep -oE '[0-9]+% left' | head -1 | grep -oE '[0-9]+' || true)
+                    CODEX_MODEL_5H_RESET=$(printf '%s\n' "$_line" | sed -n 's/.*(resets \([^)]*\)).*/\1/p' | head -1)
+                fi
+
+                # Model Weekly (second line)
+                _line=$(printf '%s\n' "$_wk_lines" | sed -n '2p' || true)
+                if [[ -n "$_line" ]]; then
+                    CODEX_MODEL_7D_LEFT=$(printf '%s\n' "$_line" | grep -oE '[0-9]+% left' | head -1 | grep -oE '[0-9]+' || true)
+                    CODEX_MODEL_7D_RESET=$(printf '%s\n' "$_line" | sed -n 's/.*(resets \([^)]*\)).*/\1/p' | head -1)
+                fi
+            fi
+
+            # Mark done if we got at least account 5h
+            [[ -n "$CODEX_ACCT_5H_LEFT" ]] && _rl_quota_done=true
+        fi
+
+        # Check context thresholds
         if [[ "$ctx" != "?" ]]; then
             if [[ "$ctx" -lt "$CODEX_CONTEXT_CRIT" ]]; then
                 CODEX_WARNINGS="${CODEX_WARNINGS} ${agent}(${ctx}%)!!"
@@ -390,6 +558,27 @@ if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
     done
     printf "\n"
 
+    # Quota display from /status
+    printf "  Quota (%s)\n" "${codex_model:-gpt-5.3-codex}"
+    if [[ -n "$CODEX_ACCT_5H_LEFT" ]]; then
+        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_ACCT_5H_LEFT" "$(normalize_reset_value "$CODEX_ACCT_5H_RESET")"
+    else
+        printf "  5h limit: N/A\n"
+    fi
+    if [[ -n "$CODEX_ACCT_7D_LEFT" ]]; then
+        printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_ACCT_7D_LEFT" "$(normalize_reset_value "$CODEX_ACCT_7D_RESET")"
+    else
+        printf "  Weekly limit: N/A\n"
+    fi
+    # Model-level quota
+    if [[ -n "$CODEX_MODEL_5H_LEFT" ]]; then
+        printf "  %s:\n" "${CODEX_MODEL_LABEL:-Model}"
+        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_MODEL_5H_LEFT" "$(normalize_reset_value "$CODEX_MODEL_5H_RESET")"
+        if [[ -n "$CODEX_MODEL_7D_LEFT" ]]; then
+            printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_MODEL_7D_LEFT" "$(normalize_reset_value "$CODEX_MODEL_7D_RESET")"
+        fi
+    fi
+
     printf "  Limit hits (1h): %d\n" "$CODEX_LIMIT_HITS"
 
     if [[ "$CODEX_STATUS" != "OK" ]]; then
@@ -397,6 +586,18 @@ if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
     else
         printf "  Status: OK\n"
     fi
+fi
+
+# --- OpenCode ---
+if [[ ${#OPENCODE_AGENTS[@]} -gt 0 ]]; then
+    printf "\n── OpenCode ─────────────────────────\n"
+    # OpenCode exposes usage/cost statistics via `opencode stats`; limits depend on the provider/subscription.
+    printf "  Usage: opencode stats shows token and cost statistics; usage limits are provider-specific.\n"
+    for agent in "${OPENCODE_AGENTS[@]}"; do
+        cli="${AGENT_CLI[$agent]}"
+        model="${AGENT_MODEL[$agent]}"
+        printf "  %s: %s (%s)\n" "$agent" "$cli" "$model"
+    done
 fi
 
 # --- Other CLIs ---

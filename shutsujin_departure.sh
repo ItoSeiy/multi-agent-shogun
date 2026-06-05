@@ -1053,6 +1053,17 @@ echo "     │ (足軽2) │ (足軽5) │ (軍師)  │"
 echo "     └─────────┴─────────┴─────────┘"
 echo ""
 
+# ── caffeinate: スリープ防止 ──
+# 毎回 kill → 再起動で確実に -ims フラグを保証する。
+if [ "$(uname)" = "Darwin" ]; then
+    pkill -x caffeinate 2>/dev/null || true
+    sleep 1
+    nohup caffeinate -ims >/dev/null 2>&1 &
+    disown
+    osascript -e 'display notification "眠りは許さぬ。城は不眠にて守る" with title "☕ 将軍城 — 不眠の陣"' 2>/dev/null || true
+    log_success "  └─ caffeinate -ims 起動（不眠の陣）"
+fi
+
 echo ""
 echo "  ╔══════════════════════════════════════════════════════════╗"
 echo "  ║  🏯 出陣準備完了！天下布武！                              ║"

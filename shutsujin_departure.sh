@@ -6,7 +6,7 @@
 #   ./shutsujin_departure.sh           # 全エージェント起動（前回の状態を維持）
 #   ./shutsujin_departure.sh -c        # キューをリセットして起動（クリーンスタート）
 #   ./shutsujin_departure.sh -s        # セットアップのみ（Claude起動なし）
-#   ./shutsujin_departure.sh --auto-mode-on          # Claude permission auto-approved で起動
+#   ./shutsujin_departure.sh --auto-mode-on          # Claude permission auto で起動
 #   ./shutsujin_departure.sh --permission-mode plan  # Claude permission mode を明示指定
 #   ./shutsujin_departure.sh -h        # ヘルプ表示
 
@@ -132,8 +132,8 @@ KESSEN_MODE=false
 SHOGUN_NO_THINKING=false
 SILENT_MODE=false
 SHELL_OVERRIDE=""
-# Permission flag (default: dangerously-skip-permissions for backward compat)
-PERMISSION_FLAG="--dangerously-skip-permissions"
+# Permission flag (default: claude auto mode)
+PERMISSION_FLAG="--permission-mode auto"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -158,7 +158,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --auto-mode-on)
-            PERMISSION_FLAG="--permission-mode auto-approved"
+            PERMISSION_FLAG="--permission-mode auto"
             shift
             ;;
         --permission-mode)
@@ -198,7 +198,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -t, --terminal      Windows Terminal で新しいタブを開く"
             echo "  -shell, --shell SH  シェルを指定（bash または zsh）"
             echo "                      未指定時は config/settings.yaml の設定を使用"
-            echo "  --auto-mode-on      Claude を --permission-mode auto-approved で起動"
+            echo "  --auto-mode-on      Claude を --permission-mode auto で起動"
             echo "  --permission-mode M Claude の permission mode を明示指定"
             echo "  -S, --silent        サイレントモード（足軽の戦国echo表示を無効化・API節約）"
             echo "                      未指定時はshoutモード（タスク完了時に戦国風echo表示）"
@@ -214,7 +214,7 @@ while [[ $# -gt 0 ]]; do
             echo "  ./shutsujin_departure.sh -c -k         # クリーンスタート＋決戦の陣"
             echo "  ./shutsujin_departure.sh -shell zsh   # zsh用プロンプトで起動"
             echo "  ./shutsujin_departure.sh --shogun-no-thinking  # 将軍のthinkingを無効化（中継特化）"
-            echo "  ./shutsujin_departure.sh --auto-mode-on        # permission auto-approved で起動"
+            echo "  ./shutsujin_departure.sh --auto-mode-on        # permission auto で起動"
             echo "  ./shutsujin_departure.sh --permission-mode plan  # permission mode を明示指定"
             echo "  ./shutsujin_departure.sh -S           # サイレントモード（echo表示なし）"
             echo ""

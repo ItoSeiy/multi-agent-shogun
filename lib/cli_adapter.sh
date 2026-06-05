@@ -185,7 +185,7 @@ build_cli_command() {
     model=$(get_agent_model "$agent_id")
     local thinking
     thinking=$(_cli_adapter_read_yaml "cli.agents.${agent_id}.thinking" "")
-    local permission_flag="${PERMISSION_FLAG:---dangerously-skip-permissions}"
+    local permission_flag="${PERMISSION_FLAG:---permission-mode auto}"
 
     # thinking prefix: Claude CLI でのみ有効
     # thinking: true or 未設定 → そのまま（デフォルトでThinking ON）
@@ -200,16 +200,16 @@ build_cli_command() {
         claude)
             cmd="claude"
             if [[ -n "$model" ]]; then
-                cmd="$cmd --model $model"
+                cmd="$cmd --model $(_cli_adapter_shell_quote "$model")"
             fi
             cmd="$cmd $permission_flag"
             ;;
         codex)
             cmd="codex"
             if [[ -n "$model" ]]; then
-                cmd="$cmd --model $model"
+                cmd="$cmd --model $(_cli_adapter_shell_quote "$model")"
             fi
-            cmd="$cmd --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen"
+            cmd="$cmd --search --full-auto --no-alt-screen"
             ;;
         opencode)
             local normalized_model
@@ -227,7 +227,7 @@ build_cli_command() {
             quoted_agent_id=$(_cli_adapter_shell_quote "$agent_id")
             cmd="opencode"
             if [[ -n "$normalized_model" ]]; then
-                cmd="$cmd --model $normalized_model"
+                cmd="$cmd --model $(_cli_adapter_shell_quote "$normalized_model")"
             fi
             # Use --agent to load the pre-built agent definition from .opencode/agents/<name>.md.
             # Permissions are also embedded in the agent definition YAML frontmatter at build time.
@@ -245,7 +245,7 @@ build_cli_command() {
         kimi)
             cmd="kimi --yolo"
             if [[ -n "$model" ]]; then
-                cmd="$cmd --model $model"
+                cmd="$cmd --model $(_cli_adapter_shell_quote "$model")"
             fi
             ;;
         *)

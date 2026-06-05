@@ -157,6 +157,25 @@ cli:
       model: openrouter/minimax/minimax-m2.5
       variant: xhigh
 YAML
+
+    # shell metacharacterを含むモデル名
+    cat > "${TEST_TMP}/settings_special_model.yaml" << 'YAML'
+cli:
+  default: claude
+  agents:
+    shogun:
+      type: claude
+      model: claude-opus-4-8[1m]
+    ashigaru5:
+      type: codex
+      model: gpt-5.3-codex[spark]
+    ashigaru3:
+      type: kimi
+      model: k2.5[beta]
+    ashigaru1:
+      type: opencode
+      model: openrouter/minimax/minimax-m2.5[variant]
+YAML
 }
 
 # =============================================================================
@@ -359,10 +378,10 @@ load_adapter_with() {
 # build_cli_command テスト
 # =============================================================================
 
-@test "build_cli_command: claude + model → claude --model opus --dangerously-skip-permissions" {
+@test "build_cli_command: claude + model → claude --model opus --permission-mode auto" {
     load_adapter_with "${TEST_TMP}/settings_mixed.yaml"
     result=$(build_cli_command "shogun")
-    [ "$result" = "claude --model opus --dangerously-skip-permissions" ]
+    [ "$result" = "claude --model opus --permission-mode auto" ]
 }
 
 @test "build_cli_command: PERMISSION_FLAG override → claude --permission-mode auto-approved" {
@@ -376,7 +395,7 @@ load_adapter_with() {
     load_adapter_with "${TEST_TMP}/settings_mixed.yaml"
     expected_prompt_arg=$(get_startup_prompt_arg "ashigaru5")
     result=$(build_cli_command "ashigaru5")
-    [ "$result" = "codex --model sonnet --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen $expected_prompt_arg" ]
+    [ "$result" = "codex --model sonnet --search --full-auto --no-alt-screen $expected_prompt_arg" ]
 }
 
 @test "build_cli_command: copilot → copilot --yolo" {
@@ -395,6 +414,33 @@ load_adapter_with() {
     load_adapter_with "${TEST_TMP}/settings_kimi.yaml"
     result=$(build_cli_command "ashigaru4")
     [ "$result" = "kimi --yolo --model k2.5" ]
+}
+
+@test "build_cli_command: special claude model is shell-quoted" {
+    load_adapter_with "${TEST_TMP}/settings_special_model.yaml"
+    result=$(build_cli_command "shogun")
+    [ "$result" = "claude --model 'claude-opus-4-8[1m]' --permission-mode auto" ]
+}
+
+@test "build_cli_command: special codex model is shell-quoted" {
+    load_adapter_with "${TEST_TMP}/settings_special_model.yaml"
+    expected_prompt_arg=$(get_startup_prompt_arg "ashigaru5")
+    result=$(build_cli_command "ashigaru5")
+    [ "$result" = "codex --model 'gpt-5.3-codex[spark]' --search --full-auto --no-alt-screen $expected_prompt_arg" ]
+}
+
+@test "build_cli_command: special kimi model is shell-quoted" {
+    load_adapter_with "${TEST_TMP}/settings_special_model.yaml"
+    result=$(build_cli_command "ashigaru3")
+    [ "$result" = "kimi --yolo --model 'k2.5[beta]'" ]
+}
+
+@test "build_cli_command: special opencode model is shell-quoted" {
+    load_adapter_with "${TEST_TMP}/settings_special_model.yaml"
+    result=$(build_cli_command "ashigaru1")
+    expected_tui_config=$(_cli_adapter_shell_quote "${PROJECT_ROOT}/config/opencode-tui.json")
+    [[ "$result" == "OPENCODE_AGENT_ID=ashigaru1 OPENCODE_TUI_CONFIG=$expected_tui_config"* ]]
+    [[ "$result" == *"opencode --model 'openrouter/minimax/minimax-m2.5[variant]' --agent ashigaru1"* ]]
 }
 
 @test "build_cli_command: opencode shogun → --agent shogun + pinned tui config" {
@@ -471,13 +517,13 @@ load_adapter_with() {
 @test "build_cli_command: cliセクションなし → claude フォールバック" {
     load_adapter_with "${TEST_TMP}/settings_none.yaml"
     result=$(build_cli_command "ashigaru1")
-    [[ "$result" == claude*--dangerously-skip-permissions ]]
+    [[ "$result" == claude*"--permission-mode auto" ]]
 }
 
 @test "build_cli_command: settings読取失敗 → claude フォールバック" {
     load_adapter_with "/nonexistent/settings.yaml"
     result=$(build_cli_command "ashigaru1")
-    [[ "$result" == claude*--dangerously-skip-permissions ]]
+    [[ "$result" == claude*"--permission-mode auto" ]]
 }
 
 # =============================================================================
@@ -929,7 +975,7 @@ cli:
 YAML
     load_adapter_with "${TEST_TMP}/settings_thinking.yaml"
     result=$(build_cli_command "ashigaru1")
-    [ "$result" = "claude --model claude-sonnet-4-6 --dangerously-skip-permissions" ]
+    [ "$result" = "claude --model claude-sonnet-4-6 --permission-mode auto" ]
 }
 
 @test "build_cli_command: thinking:false → MAX_THINKING_TOKENS=0 prefix" {
@@ -944,7 +990,7 @@ cli:
 YAML
     load_adapter_with "${TEST_TMP}/settings_thinking.yaml"
     result=$(build_cli_command "ashigaru1")
-    [ "$result" = "MAX_THINKING_TOKENS=0 claude --model claude-sonnet-4-6 --dangerously-skip-permissions" ]
+    [ "$result" = "MAX_THINKING_TOKENS=0 claude --model claude-sonnet-4-6 --permission-mode auto" ]
 }
 
 @test "build_cli_command: thinking未設定 → MAX_THINKING_TOKENS=0 なし (デフォルトThinking ON)" {
@@ -958,7 +1004,7 @@ cli:
 YAML
     load_adapter_with "${TEST_TMP}/settings_thinking.yaml"
     result=$(build_cli_command "ashigaru1")
-    [ "$result" = "claude --model claude-sonnet-4-6 --dangerously-skip-permissions" ]
+    [ "$result" = "claude --model claude-sonnet-4-6 --permission-mode auto" ]
 }
 
 @test "build_cli_command: codex + thinking:false → MAX_THINKING_TOKENS=0 なし (Codexには無関係)" {

@@ -44,6 +44,10 @@ workflow:
   - step: 3
     action: update_dashboard
     target: dashboard.md
+  - step: 3.5
+    action: push_dashboard_remote
+    command: '[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh'
+    note: "Push dashboard.md to shogun-dashboard repo for mobile viewing. Skipped if script not found."
   - step: 4
     action: analyze_and_plan
     note: "Receive shogun's instruction as PURPOSE. Design the optimal execution plan yourself."
@@ -134,6 +138,10 @@ workflow:
       4. 🚨要対応で解決済みのものは「✅解決済み」に更新
       5. ✅完了セクションが50行を超えたら古いもの（2週間以上前）を削除
       ダッシュボードはステータスボードであり作業ログではない。簡潔に保て。
+  - step: 11.1
+    action: push_dashboard_remote
+    command: '[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh'
+    note: "Push updated dashboard after report processing."
   - step: 11.5
     action: unblock_dependent_tasks
     note: "Scan all task YAMLs for blocked_by containing completed task_id. Remove and unblock."
@@ -609,6 +617,13 @@ When updating dashboard.md with Frog and streak info, use this expanded template
 - Frog section should be at the **top** of dashboard.md (after title, before 進行中)
 
 ## ntfy Notification to Lord
+
+After updating dashboard.md, push to remote repository:
+```bash
+[ -x scripts/push_dashboard.sh ] && bash scripts/push_dashboard.sh
+```
+This pushes to the shogun-dashboard private repo for mobile viewing.
+Conditional execution: skipped if push_dashboard.sh does not exist.
 
 After updating dashboard.md, send ntfy notification:
 - cmd complete: `bash scripts/ntfy.sh "✅ cmd_{id} 完了 — {summary}"`

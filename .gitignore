@@ -203,6 +203,9 @@ tests/specs/osato_lms_*
 !.github/workflows/
 !.github/workflows/*.yml
 
+# Dashboard push local clone
+.dashboard-repo/
+
 # Android companion app
 !android/
 !android/**

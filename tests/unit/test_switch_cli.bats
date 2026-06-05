@@ -175,7 +175,7 @@ PYEOF
 
     result=$(build_cli_command "ashigaru1")
     [[ "$result" == *"claude-opus-4-6"* ]]
-    [[ "$result" == *"--dangerously-skip-permissions"* ]]
+    [[ "$result" == *"--permission-mode auto"* ]]
 }
 
 @test "update_settings: thinking:false後のbuild_cli_commandにMAX_THINKING_TOKENS=0" {

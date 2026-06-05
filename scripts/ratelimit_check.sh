@@ -81,12 +81,13 @@ done
 # ═══════════════════════════════════════════════════════
 # Phase 2: Group agents by CLI type
 # ═══════════════════════════════════════════════════════
-declare -a CLAUDE_AGENTS=() CODEX_AGENTS=() OTHER_AGENTS=()
+declare -a CLAUDE_AGENTS=() CODEX_AGENTS=() OPENCODE_AGENTS=() OTHER_AGENTS=()
 
 for agent in "${ALL_AGENTS[@]}"; do
     case "${AGENT_CLI[$agent]}" in
         claude) CLAUDE_AGENTS+=("$agent") ;;
         codex)  CODEX_AGENTS+=("$agent") ;;
+        opencode) OPENCODE_AGENTS+=("$agent") ;;
         *)      OTHER_AGENTS+=("$agent") ;;
     esac
 done
@@ -158,6 +159,37 @@ extract_latest_codex_status_block() {
             printf "%s", last
         }
     ' <<< "$1"
+}
+
+extract_codex_context_left() {
+    awk '
+        /context left/ && match($0, /([0-9]+)%/, m) {
+            context = m[1]
+        }
+        /Context window:/ && match($0, /([0-9]+)% left/, m) {
+            fallback = m[1]
+        }
+        /[0-9]+% left/ && /·/ && match($0, /([0-9]+)% left/, m) {
+            context = m[1]
+        }
+        END {
+            if (context != "") {
+                print context
+            } else if (fallback != "") {
+                print fallback
+            }
+        }
+    ' <<< "$1"
+}
+
+normalize_reset_value() {
+    local reset_value="${1:-}"
+
+    if [[ -n "${reset_value//[[:space:]]/}" ]]; then
+        printf '%s' "$reset_value"
+    else
+        printf 'unknown'
+    fi
 }
 
 # ═══════════════════════════════════════════════════════
@@ -319,18 +351,17 @@ if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
 
     for agent in "${CODEX_AGENTS[@]}"; do
         pane="${AGENT_PANE[$agent]}"
+        _pane_snapshot=$(capture_tmux_pane_zoomed "$pane" -80)
 
-        # Context: read from status bar (always visible, no /status needed)
-        ctx=$(tmux capture-pane -t "$pane" -p -S -5 2>/dev/null \
-            | grep -oE '[0-9]+% left' | tail -1 \
-            | grep -oE '[0-9]+' || echo "?")
+        # Context: use a zoomed capture so the Codex prompt or recent /status block survives narrow panes.
+        ctx=$(extract_codex_context_left "$_pane_snapshot" || true)
         [[ -z "$ctx" ]] && ctx="?"
         CODEX_CONTEXT["$agent"]="$ctx"
 
         # Quota: capture the latest /status block from a zoomed pane so narrow tiled panes do not
         # truncate "% left" and reset timestamps.
         if ! $_rl_quota_done; then
-            _status_out=$(capture_tmux_pane_zoomed "$pane" -80)
+            _status_out="$_pane_snapshot"
             _status_block=$(extract_latest_codex_status_block "$_status_out")
 
             if [[ ! "$_status_block" =~ [0-9]+%[[:space:]]left ]]; then
@@ -530,21 +561,21 @@ if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
     # Quota display from /status
     printf "  Quota (%s)\n" "${codex_model:-gpt-5.3-codex}"
     if [[ -n "$CODEX_ACCT_5H_LEFT" ]]; then
-        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_ACCT_5H_LEFT" "$CODEX_ACCT_5H_RESET"
+        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_ACCT_5H_LEFT" "$(normalize_reset_value "$CODEX_ACCT_5H_RESET")"
     else
         printf "  5h limit: N/A\n"
     fi
     if [[ -n "$CODEX_ACCT_7D_LEFT" ]]; then
-        printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_ACCT_7D_LEFT" "$CODEX_ACCT_7D_RESET"
+        printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_ACCT_7D_LEFT" "$(normalize_reset_value "$CODEX_ACCT_7D_RESET")"
     else
         printf "  Weekly limit: N/A\n"
     fi
     # Model-level quota
     if [[ -n "$CODEX_MODEL_5H_LEFT" ]]; then
         printf "  %s:\n" "${CODEX_MODEL_LABEL:-Model}"
-        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_MODEL_5H_LEFT" "$CODEX_MODEL_5H_RESET"
+        printf "  5h limit: %s%% left (resets %s)\n" "$CODEX_MODEL_5H_LEFT" "$(normalize_reset_value "$CODEX_MODEL_5H_RESET")"
         if [[ -n "$CODEX_MODEL_7D_LEFT" ]]; then
-            printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_MODEL_7D_LEFT" "$CODEX_MODEL_7D_RESET"
+            printf "  Weekly limit: %s%% left (resets %s)\n" "$CODEX_MODEL_7D_LEFT" "$(normalize_reset_value "$CODEX_MODEL_7D_RESET")"
         fi
     fi
 
@@ -555,6 +586,18 @@ if [[ ${#CODEX_AGENTS[@]} -gt 0 ]]; then
     else
         printf "  Status: OK\n"
     fi
+fi
+
+# --- OpenCode ---
+if [[ ${#OPENCODE_AGENTS[@]} -gt 0 ]]; then
+    printf "\n── OpenCode ─────────────────────────\n"
+    # OpenCode exposes usage/cost statistics via `opencode stats`; limits depend on the provider/subscription.
+    printf "  Usage: opencode stats shows token and cost statistics; usage limits are provider-specific.\n"
+    for agent in "${OPENCODE_AGENTS[@]}"; do
+        cli="${AGENT_CLI[$agent]}"
+        model="${AGENT_MODEL[$agent]}"
+        printf "  %s: %s (%s)\n" "$agent" "$cli" "$model"
+    done
 fi
 
 # --- Other CLIs ---

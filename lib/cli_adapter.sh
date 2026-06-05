@@ -209,7 +209,7 @@ build_cli_command() {
             if [[ -n "$model" ]]; then
                 cmd="$cmd --model $(_cli_adapter_shell_quote "$model")"
             fi
-            cmd="$cmd --search --full-auto --no-alt-screen"
+            cmd="$cmd --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen"
             ;;
         opencode)
             local normalized_model
